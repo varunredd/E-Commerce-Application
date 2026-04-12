@@ -19,7 +19,6 @@ function AuthLogin() {
   function onSubmit(event) {
     event.preventDefault();
     dispatch(loginUser(formData)).then((data) => {
-      console.log(data);
       if (data?.payload?.success) {
         toast({
           title: data?.payload?.message,
@@ -33,7 +32,6 @@ function AuthLogin() {
     });
   }
 
-  console.log(formData);
 
   return (
     <div className="mx-auto w-full max-w-md space-y-6">

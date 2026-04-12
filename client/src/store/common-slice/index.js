@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "@/lib/api";
 
 const initialState = {
   isLoading: false,
@@ -9,10 +9,7 @@ const initialState = {
 export const getFeatureImages = createAsyncThunk(
   "/order/getFeatureImages",
   async () => {
-    const response = await axios.get(
-      `https://mp-server-2y5d.onrender.com/api/common/feature/get`
-    );
-
+    const response = await api.get("/api/common/feature/get");
     return response.data;
   }
 );
@@ -20,11 +17,7 @@ export const getFeatureImages = createAsyncThunk(
 export const addFeatureImage = createAsyncThunk(
   "/order/addFeatureImage",
   async (image) => {
-    const response = await axios.post(
-      `https://mp-server-2y5d.onrender.com/api/common/feature/add`,
-      { image }
-    );
-
+    const response = await api.post("/api/common/feature/add", { image });
     return response.data;
   }
 );
@@ -35,9 +28,7 @@ const commonSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(getFeatureImages.pending, (state) => {
-        state.isLoading = true;
-      })
+      .addCase(getFeatureImages.pending, (state) => { state.isLoading = true; })
       .addCase(getFeatureImages.fulfilled, (state, action) => {
         state.isLoading = false;
         state.featureImageList = action.payload.data;

@@ -5,8 +5,8 @@ const Product = require("../../models/Product");
 
 const createOrder = async (req, res) => {
   try {
+    const userId = req.user.id; // from JWT, not request body
     const {
-      userId,
       cartItems,
       addressInfo,
       orderStatus,
@@ -20,14 +20,16 @@ const createOrder = async (req, res) => {
       cartId,
     } = req.body;
 
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+
     const create_payment_json = {
       intent: "sale",
       payer: {
         payment_method: "paypal",
       },
       redirect_urls: {
-        return_url: "http://localhost:5173/shop/paypal-return",
-        cancel_url: "http://localhost:5173/shop/paypal-cancel",
+        return_url: `${clientUrl}/shop/paypal-return`,
+        cancel_url: `${clientUrl}/shop/paypal-cancel`,
       },
       transactions: [
         {
@@ -44,53 +46,52 @@ const createOrder = async (req, res) => {
             currency: "USD",
             total: totalAmount.toFixed(2),
           },
-          description: "description",
+          description: "E-Commerce Order",
         },
       ],
     };
 
     paypal.payment.create(create_payment_json, async (error, paymentInfo) => {
       if (error) {
-        console.log(error);
-
+        console.error("PayPal create error:", error);
         return res.status(500).json({
           success: false,
-          message: "Error while creating paypal payment",
-        });
-      } else {
-        const newlyCreatedOrder = new Order({
-          userId,
-          cartId,
-          cartItems,
-          addressInfo,
-          orderStatus,
-          paymentMethod,
-          paymentStatus,
-          totalAmount,
-          orderDate,
-          orderUpdateDate,
-          paymentId,
-          payerId,
-        });
-
-        await newlyCreatedOrder.save();
-
-        const approvalURL = paymentInfo.links.find(
-          (link) => link.rel === "approval_url"
-        ).href;
-
-        res.status(201).json({
-          success: true,
-          approvalURL,
-          orderId: newlyCreatedOrder._id,
+          message: "Error while creating PayPal payment",
         });
       }
+
+      const newlyCreatedOrder = new Order({
+        userId,
+        cartId,
+        cartItems,
+        addressInfo,
+        orderStatus,
+        paymentMethod,
+        paymentStatus,
+        totalAmount,
+        orderDate,
+        orderUpdateDate,
+        paymentId,
+        payerId,
+      });
+
+      await newlyCreatedOrder.save();
+
+      const approvalURL = paymentInfo.links.find(
+        (link) => link.rel === "approval_url"
+      ).href;
+
+      res.status(201).json({
+        success: true,
+        approvalURL,
+        orderId: newlyCreatedOrder._id,
+      });
     });
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.error("Create order error:", error.message);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Failed to create order",
     });
   }
 };
@@ -104,7 +105,7 @@ const capturePayment = async (req, res) => {
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Order can not be found",
+        message: "Order not found",
       });
     }
 
@@ -113,24 +114,24 @@ const capturePayment = async (req, res) => {
     order.paymentId = paymentId;
     order.payerId = payerId;
 
+    // Atomic stock decrement — prevents overselling on concurrent requests
     for (let item of order.cartItems) {
-      let product = await Product.findById(item.productId);
+      const result = await Product.findOneAndUpdate(
+        { _id: item.productId, totalStock: { $gte: item.quantity } },
+        { $inc: { totalStock: -item.quantity } },
+        { new: true }
+      );
 
-      if (!product) {
-        return res.status(404).json({
+      if (!result) {
+        return res.status(400).json({
           success: false,
-          message: `Not enough stock for this product ${product.title}`,
+          message: `Insufficient stock for product: ${item.title}`,
         });
       }
-
-      product.totalStock -= item.quantity;
-
-      await product.save();
     }
 
     const getCartId = order.cartId;
     await Cart.findByIdAndDelete(getCartId);
-
     await order.save();
 
     res.status(200).json({
@@ -138,20 +139,20 @@ const capturePayment = async (req, res) => {
       message: "Order confirmed",
       data: order,
     });
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.error("Capture payment error:", error.message);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Failed to capture payment",
     });
   }
 };
 
 const getAllOrdersByUser = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user.id; // from JWT
 
-    const orders = await Order.find({ userId });
+    const orders = await Order.find({ userId }).sort({ orderDate: -1 });
 
     if (!orders.length) {
       return res.status(404).json({
@@ -164,11 +165,11 @@ const getAllOrdersByUser = async (req, res) => {
       success: true,
       data: orders,
     });
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.error("Get orders error:", error.message);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Failed to fetch orders",
     });
   }
 };
@@ -176,7 +177,6 @@ const getAllOrdersByUser = async (req, res) => {
 const getOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
-
     const order = await Order.findById(id);
 
     if (!order) {
@@ -190,11 +190,11 @@ const getOrderDetails = async (req, res) => {
       success: true,
       data: order,
     });
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.error("Order details error:", error.message);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Failed to fetch order details",
     });
   }
 };

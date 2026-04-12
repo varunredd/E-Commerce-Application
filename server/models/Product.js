@@ -15,4 +15,10 @@ const ProductSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for filter + sort queries
+ProductSchema.index({ category: 1, price: 1 });
+ProductSchema.index({ brand: 1, price: 1 });
+ProductSchema.index({ category: 1, brand: 1, price: 1 });
+ProductSchema.index({ title: "text", description: "text" });
+
 module.exports = mongoose.model("Product", ProductSchema);

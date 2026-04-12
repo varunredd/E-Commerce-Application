@@ -1,13 +1,15 @@
 const express = require("express");
-
 const {
   addAddress,
   fetchAllAddress,
   editAddress,
   deleteAddress,
 } = require("../../controllers/shop/address-controller");
+const { authMiddleware } = require("../../controllers/auth/auth-controller");
 
 const router = express.Router();
+
+router.use(authMiddleware);
 
 router.post("/add", addAddress);
 router.get("/get/:userId", fetchAllAddress);

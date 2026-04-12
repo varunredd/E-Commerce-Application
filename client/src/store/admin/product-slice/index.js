@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "@/lib/api";
 
 const initialState = {
   isLoading: false,
@@ -9,16 +9,9 @@ const initialState = {
 export const addNewProduct = createAsyncThunk(
   "/products/addnewproduct",
   async (formData) => {
-    const result = await axios.post(
-      "https://mp-server-2y5d.onrender.com/api/admin/products/add",
-      formData,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
+    const result = await api.post("/api/admin/products/add", formData, {
+      headers: { "Content-Type": "application/json" },
+    });
     return result?.data;
   }
 );
@@ -26,10 +19,7 @@ export const addNewProduct = createAsyncThunk(
 export const fetchAllProducts = createAsyncThunk(
   "/products/fetchAllProducts",
   async () => {
-    const result = await axios.get(
-      "https://mp-server-2y5d.onrender.com/api/admin/products/get"
-    );
-
+    const result = await api.get("/api/admin/products/get");
     return result?.data;
   }
 );
@@ -37,16 +27,9 @@ export const fetchAllProducts = createAsyncThunk(
 export const editProduct = createAsyncThunk(
   "/products/editProduct",
   async ({ id, formData }) => {
-    const result = await axios.put(
-      `https://mp-server-2y5d.onrender.com/api/admin/products/edit/${id}`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
+    const result = await api.put(`/api/admin/products/edit/${id}`, formData, {
+      headers: { "Content-Type": "application/json" },
+    });
     return result?.data;
   }
 );
@@ -54,10 +37,7 @@ export const editProduct = createAsyncThunk(
 export const deleteProduct = createAsyncThunk(
   "/products/deleteProduct",
   async (id) => {
-    const result = await axios.delete(
-      `https://mp-server-2y5d.onrender.com/api/admin/products/delete/${id}`
-    );
-
+    const result = await api.delete(`/api/admin/products/delete/${id}`);
     return result?.data;
   }
 );
@@ -68,9 +48,7 @@ const AdminProductsSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(fetchAllProducts.pending, (state) => {
-        state.isLoading = true;
-      })
+      .addCase(fetchAllProducts.pending, (state) => { state.isLoading = true; })
       .addCase(fetchAllProducts.fulfilled, (state, action) => {
         state.isLoading = false;
         state.productList = action.payload.data;

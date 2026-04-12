@@ -1,6 +1,4 @@
 const mongoose = require('mongoose');
-const { useAccordionButton } = require('react-bootstrap');
-
 
 const userSchema = new mongoose.Schema({
     userName: {

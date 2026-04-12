@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "@/lib/api";
 
 const initialState = {
   isLoading: false,
@@ -9,10 +9,7 @@ const initialState = {
 export const getSearchResults = createAsyncThunk(
   "/order/getSearchResults",
   async (keyword) => {
-    const response = await axios.get(
-      `https://mp-server-2y5d.onrender.com/api/shop/search/${keyword}`
-    );
-
+    const response = await api.get(`/api/shop/search/${keyword}`);
     return response.data;
   }
 );
@@ -27,9 +24,7 @@ const searchSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(getSearchResults.pending, (state) => {
-        state.isLoading = true;
-      })
+      .addCase(getSearchResults.pending, (state) => { state.isLoading = true; })
       .addCase(getSearchResults.fulfilled, (state, action) => {
         state.isLoading = false;
         state.searchResults = action.payload.data;
@@ -42,5 +37,4 @@ const searchSlice = createSlice({
 });
 
 export const { resetSearchResults } = searchSlice.actions;
-
 export default searchSlice.reducer;

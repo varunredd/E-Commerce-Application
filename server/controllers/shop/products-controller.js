@@ -2,7 +2,13 @@ const Product = require("../../models/Product");
 
 const getFilteredProducts = async (req, res) => {
   try {
-    const { category = [], brand = [], sortBy = "price-lowtohigh" } = req.query;
+    const {
+      category = [],
+      brand = [],
+      sortBy = "price-lowtohigh",
+      page = 1,
+      limit = 12,
+    } = req.query;
 
     let filters = {};
 
@@ -19,38 +25,45 @@ const getFilteredProducts = async (req, res) => {
     switch (sortBy) {
       case "price-lowtohigh":
         sort.price = 1;
-
         break;
       case "price-hightolow":
         sort.price = -1;
-
         break;
       case "title-atoz":
         sort.title = 1;
-
         break;
-
       case "title-ztoa":
         sort.title = -1;
-
         break;
-
       default:
         sort.price = 1;
         break;
     }
 
-    const products = await Product.find(filters).sort(sort);
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [products, totalCount] = await Promise.all([
+      Product.find(filters).sort(sort).skip(skip).limit(limitNum),
+      Product.countDocuments(filters),
+    ]);
 
     res.status(200).json({
       success: true,
       data: products,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalProducts: totalCount,
+        hasMore: skip + products.length < totalCount,
+      },
     });
-  } catch (e) {
-    console.log(error);
+  } catch (error) {
+    console.error("Filter products error:", error.message);
     res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Failed to fetch products",
     });
   }
 };
@@ -70,11 +83,11 @@ const getProductDetails = async (req, res) => {
       success: true,
       data: product,
     });
-  } catch (e) {
-    console.log(error);
+  } catch (error) {
+    console.error("Product details error:", error.message);
     res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Failed to fetch product details",
     });
   }
 };

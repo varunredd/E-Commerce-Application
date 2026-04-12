@@ -1,28 +1,22 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "@/lib/api";
 
 const initialState = {
   isLoading: false,
   productList: [],
   productDetails: null,
+  pagination: null,
 };
 
 export const fetchAllFilteredProducts = createAsyncThunk(
   "/products/fetchAllProducts",
   async ({ filterParams, sortParams }) => {
-    console.log(fetchAllFilteredProducts, "fetchAllFilteredProducts");
-
     const query = new URLSearchParams({
       ...filterParams,
       sortBy: sortParams,
     });
 
-    const result = await axios.get(
-      `https://mp-server-2y5d.onrender.com/api/shop/products/get?${query}`
-    );
-
-    console.log(result);
-
+    const result = await api.get(`/api/shop/products/get?${query}`);
     return result?.data;
   }
 );
@@ -30,10 +24,7 @@ export const fetchAllFilteredProducts = createAsyncThunk(
 export const fetchProductDetails = createAsyncThunk(
   "/products/fetchProductDetails",
   async (id) => {
-    const result = await axios.get(
-      `https://mp-server-2y5d.onrender.com/api/shop/products/get/${id}`
-    );
-
+    const result = await api.get(`/api/shop/products/get/${id}`);
     return result?.data;
   }
 );
@@ -54,6 +45,7 @@ const shoppingProductSlice = createSlice({
       .addCase(fetchAllFilteredProducts.fulfilled, (state, action) => {
         state.isLoading = false;
         state.productList = action.payload.data;
+        state.pagination = action.payload.pagination || null;
       })
       .addCase(fetchAllFilteredProducts.rejected, (state) => {
         state.isLoading = false;

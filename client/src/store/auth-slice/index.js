@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
-// import { build } from "vite";
+import api from "@/lib/api";
 
 const initialState = {
   isAuthenticated: false,
@@ -8,58 +7,27 @@ const initialState = {
   user: null,
 };
 
-export const registerUser = createAsyncThunk(
-  "/auth/register",
-  async (formData) => {
-    const response = await axios.post(
-      "https://mp-server-2y5d.onrender.com/api/auth/register",
-      formData,
-      {
-        withCredentials: true,
-      }
-    );
-    return response.data;
-  }
-);
-
-export const loginUser = createAsyncThunk("/auth/login", async (formData) => {
-  const response = await axios.post(
-    "https://mp-server-2y5d.onrender.com/api/auth/login",
-    formData,
-    {
-      withCredentials: true,
-    }
-  );
+export const registerUser = createAsyncThunk("/auth/register", async (formData) => {
+  const response = await api.post("/api/auth/register", formData);
   return response.data;
 });
 
-export const logoutUser = createAsyncThunk(
-  "/auth/logout",
+export const loginUser = createAsyncThunk("/auth/login", async (formData) => {
+  const response = await api.post("/api/auth/login", formData);
+  return response.data;
+});
 
-  async () => {
-    const response = await axios.post(
-      "https://mp-server-2y5d.onrender.com/api/auth/logout",
-      {},
-      {
-        withCredentials: true,
-      }
-    );
-
-    return response.data;
-  }
-);
+export const logoutUser = createAsyncThunk("/auth/logout", async () => {
+  const response = await api.post("/api/auth/logout", {});
+  return response.data;
+});
 
 export const checkAuth = createAsyncThunk("/auth/check-auth", async () => {
-  const response = await axios.get(
-    "https://mp-server-2y5d.onrender.com/api/auth/check-auth",
-    {
-      withCredentials: true,
-      headers: {
-        "Cache-Control":
-          "no-store, no-cache, must-revalidate, proxy-revalidate",
-      },
-    }
-  );
+  const response = await api.get("/api/auth/check-auth", {
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    },
+  });
   return response.data;
 });
 
@@ -117,5 +85,6 @@ const authSlice = createSlice({
       });
   },
 });
+
 export const { setUser } = authSlice.actions;
 export default authSlice.reducer;
