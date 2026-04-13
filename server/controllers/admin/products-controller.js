@@ -1,6 +1,24 @@
 const { imageUploadUtil } = require("../../helpers/cloudinary");
 const Product = require("../../models/Product");
 
+const getOwnerFilter = (req) => {
+  const userId = req.user?.id || req.user?._id;
+  const role = req.user?.role;
+
+  // super admin can access everything
+  if (role === "super_admin") {
+    return {};
+  }
+
+  // normal admin only sees own products
+  if (userId) {
+    return { ownerAdminId: userId };
+  }
+
+  // fallback: no user context, return nothing (safe default)
+  return { ownerAdminId: null };
+};
+
 const handleImageUpload = async (req, res) => {
   try {
     const b64 = Buffer.from(req.file.buffer).toString("base64");
@@ -33,6 +51,15 @@ const addProduct = async (req, res) => {
       totalStock,
     } = req.body;
 
+    const userId = req.user?.id || req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User context required to create a product",
+      });
+    }
+
     const newlyCreatedProduct = new Product({
       image,
       title,
@@ -43,9 +70,11 @@ const addProduct = async (req, res) => {
       salePrice,
       totalStock,
       averageReview: 0,
+      ownerAdminId: userId,
     });
 
     await newlyCreatedProduct.save();
+
     res.status(201).json({
       success: true,
       data: newlyCreatedProduct,
@@ -62,12 +91,14 @@ const addProduct = async (req, res) => {
 const fetchAllProducts = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 100));
     const skip = (page - 1) * limit;
 
+    const filter = getOwnerFilter(req);
+
     const [products, total] = await Promise.all([
-      Product.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit),
-      Product.countDocuments({}),
+      Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Product.countDocuments(filter),
     ]);
 
     res.status(200).json({
@@ -102,23 +133,32 @@ const editProduct = async (req, res) => {
       totalStock,
     } = req.body;
 
-    let findProduct = await Product.findById(id);
-    if (!findProduct)
+    const filter = {
+      _id: id,
+      ...getOwnerFilter(req),
+    };
+
+    let findProduct = await Product.findOne(filter);
+
+    if (!findProduct) {
       return res.status(404).json({
         success: false,
-        message: "Product not found",
+        message: "Product not found or not accessible",
       });
+    }
 
     findProduct.title = title || findProduct.title;
     findProduct.description = description || findProduct.description;
     findProduct.category = category || findProduct.category;
     findProduct.brand = brand || findProduct.brand;
     findProduct.price = price === "" ? 0 : price || findProduct.price;
-    findProduct.salePrice = salePrice === "" ? 0 : salePrice || findProduct.salePrice;
+    findProduct.salePrice =
+      salePrice === "" ? 0 : salePrice || findProduct.salePrice;
     findProduct.totalStock = totalStock || findProduct.totalStock;
     findProduct.image = image || findProduct.image;
 
     await findProduct.save();
+
     res.status(200).json({
       success: true,
       data: findProduct,
@@ -135,13 +175,20 @@ const editProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findByIdAndDelete(id);
 
-    if (!product)
+    const filter = {
+      _id: id,
+      ...getOwnerFilter(req),
+    };
+
+    const product = await Product.findOneAndDelete(filter);
+
+    if (!product) {
       return res.status(404).json({
         success: false,
-        message: "Product not found",
+        message: "Product not found or not accessible",
       });
+    }
 
     res.status(200).json({
       success: true,

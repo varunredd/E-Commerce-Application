@@ -1,37 +1,54 @@
 import { AlignJustify, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
-import { useDispatch } from 'react-redux';
-
-
-import PropTypes from 'prop-types';
+import { useDispatch, useSelector } from "react-redux";
+import PropTypes from "prop-types";
 import { logoutUser } from "@/store/auth-slice";
+import { Avatar, AvatarFallback } from "../ui/avatar";
 
 function AdminHeader({ setOpen }) {
-
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
 
   function handleLogout() {
     dispatch(logoutUser());
   }
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-background border-b">
-      <Button onClick={() => setOpen(true)} className="lg:hidden sm:block">
-        <AlignJustify />
-        <span className="sr-only">Toggle Menu</span>
+    <header className="flex items-center justify-between px-5 py-3 bg-card/80 backdrop-blur-lg border-b sticky top-0 z-30">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setOpen(true)}
+        className="lg:hidden h-9 w-9 rounded-full"
+      >
+        <AlignJustify className="h-[18px] w-[18px]" />
       </Button>
-      <div className="flex flex-1 justify-end">
-        <Button onClick={handleLogout} className="inline-flex gap-2 items-center rounded-md px-4 py-2 text-sm font-medium shadow">
-          <LogOut />
-          Logout
+
+      <div className="flex-1" />
+
+      <div className="flex items-center gap-3">
+        <div className="hidden sm:block text-right">
+          <p className="text-sm font-semibold">{user?.userName}</p>
+          <p className="text-xs text-muted-foreground">Administrator</p>
+        </div>
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="bg-gradient text-white text-xs font-bold">
+            {user?.userName?.[0]?.toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleLogout}
+          className="h-9 w-9 rounded-full text-muted-foreground hover:text-destructive"
+        >
+          <LogOut className="h-[18px] w-[18px]" />
         </Button>
       </div>
     </header>
   );
 }
 
-AdminHeader.propTypes = {
-  setOpen: PropTypes.func,
-};
+AdminHeader.propTypes = { setOpen: PropTypes.func };
 
 export default AdminHeader;

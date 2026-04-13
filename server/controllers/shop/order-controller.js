@@ -5,7 +5,7 @@ const Product = require("../../models/Product");
 
 const createOrder = async (req, res) => {
   try {
-    const userId = req.user.id; // from JWT, not request body
+    const userId = req.user.id;
     const {
       cartItems,
       addressInfo,
@@ -20,7 +20,34 @@ const createOrder = async (req, res) => {
       cartId,
     } = req.body;
 
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cart items are required",
+      });
+    }
+
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+
+    const productIds = cartItems.map((item) => item.productId);
+    const products = await Product.find({ _id: { $in: productIds } });
+
+    const productMap = new Map(
+      products.map((product) => [String(product._id), product])
+    );
+
+    const enrichedCartItems = cartItems.map((item) => {
+      const matchedProduct = productMap.get(String(item.productId));
+
+      if (!matchedProduct) {
+        throw new Error(`Product not found for item: ${item.title}`);
+      }
+
+      return {
+        ...item,
+        ownerAdminId: matchedProduct.ownerAdminId || undefined,
+      };
+    });
 
     const create_payment_json = {
       intent: "sale",
@@ -34,17 +61,17 @@ const createOrder = async (req, res) => {
       transactions: [
         {
           item_list: {
-            items: cartItems.map((item) => ({
+            items: enrichedCartItems.map((item) => ({
               name: item.title,
               sku: item.productId,
-              price: item.price.toFixed(2),
+              price: Number(item.price).toFixed(2),
               currency: "USD",
               quantity: item.quantity,
             })),
           },
           amount: {
             currency: "USD",
-            total: totalAmount.toFixed(2),
+            total: Number(totalAmount).toFixed(2),
           },
           description: "E-Commerce Order",
         },
@@ -63,7 +90,7 @@ const createOrder = async (req, res) => {
       const newlyCreatedOrder = new Order({
         userId,
         cartId,
-        cartItems,
+        cartItems: enrichedCartItems,
         addressInfo,
         orderStatus,
         paymentMethod,
@@ -79,7 +106,7 @@ const createOrder = async (req, res) => {
 
       const approvalURL = paymentInfo.links.find(
         (link) => link.rel === "approval_url"
-      ).href;
+      )?.href;
 
       res.status(201).json({
         success: true,
@@ -113,8 +140,8 @@ const capturePayment = async (req, res) => {
     order.orderStatus = "confirmed";
     order.paymentId = paymentId;
     order.payerId = payerId;
+    order.orderUpdateDate = new Date();
 
-    // Atomic stock decrement — prevents overselling on concurrent requests
     for (let item of order.cartItems) {
       const result = await Product.findOneAndUpdate(
         { _id: item.productId, totalStock: { $gte: item.quantity } },
@@ -150,7 +177,7 @@ const capturePayment = async (req, res) => {
 
 const getAllOrdersByUser = async (req, res) => {
   try {
-    const userId = req.user.id; // from JWT
+    const userId = req.user.id;
 
     const orders = await Order.find({ userId }).sort({ orderDate: -1 });
 
@@ -177,7 +204,9 @@ const getAllOrdersByUser = async (req, res) => {
 const getOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const order = await Order.findById(id);
+    const userId = req.user.id;
+
+    const order = await Order.findOne({ _id: id, userId });
 
     if (!order) {
       return res.status(404).json({

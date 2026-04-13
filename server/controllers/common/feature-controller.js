@@ -4,8 +4,6 @@ const addFeatureImage = async (req, res) => {
   try {
     const { image } = req.body;
 
-    console.log(image, "image");
-
     const featureImages = new Feature({
       image,
     });
@@ -17,10 +15,10 @@ const addFeatureImage = async (req, res) => {
       data: featureImages,
     });
   } catch (e) {
-    console.log(e);
+    console.error("Add feature image error:", e.message);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Failed to add feature image",
     });
   }
 };
@@ -34,12 +32,38 @@ const getFeatureImages = async (req, res) => {
       data: images,
     });
   } catch (e) {
-    console.log(e);
+    console.error("Get feature images error:", e.message);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Failed to fetch feature images",
     });
   }
 };
 
-module.exports = { addFeatureImage, getFeatureImages };
+const deleteFeatureImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const image = await Feature.findByIdAndDelete(id);
+
+    if (!image) {
+      return res.status(404).json({
+        success: false,
+        message: "Image not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Banner deleted successfully",
+    });
+  } catch (e) {
+    console.error("Delete feature image error:", e.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete feature image",
+    });
+  }
+};
+
+module.exports = { addFeatureImage, getFeatureImages, deleteFeatureImage };

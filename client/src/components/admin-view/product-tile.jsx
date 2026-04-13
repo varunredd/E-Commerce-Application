@@ -7,6 +7,8 @@ function AdminProductTile({
   setFormData,
   setOpenCreateProductsDialog,
   setCurrentEditedId,
+  setImageFile,
+  setUploadedImageUrl,
   handleDelete,
 }) {
   return (
@@ -40,6 +42,8 @@ function AdminProductTile({
               setOpenCreateProductsDialog(true);
               setCurrentEditedId(product?._id);
               setFormData(product);
+              setImageFile(null);
+              setUploadedImageUrl("");
             }}
           >
             Edit
@@ -50,6 +54,7 @@ function AdminProductTile({
     </Card>
   );
 }
+
 AdminProductTile.propTypes = {
   product: PropTypes.shape({
     image: PropTypes.string,
@@ -61,6 +66,8 @@ AdminProductTile.propTypes = {
   setFormData: PropTypes.func,
   setOpenCreateProductsDialog: PropTypes.func,
   setCurrentEditedId: PropTypes.func,
+  setImageFile: PropTypes.func,
+  setUploadedImageUrl: PropTypes.func,
   handleDelete: PropTypes.func,
 };
 

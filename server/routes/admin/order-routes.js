@@ -9,7 +9,7 @@ const { authMiddleware, requireRole } = require("../../controllers/auth/auth-con
 const router = express.Router();
 
 // All admin order routes require auth + admin role
-router.use(authMiddleware, requireRole("admin"));
+router.use(authMiddleware, requireRole("admin", "super_admin"));
 
 router.get("/get", getAllOrdersOfAllUsers);
 router.get("/details/:id", getOrderDetailsForAdmin);

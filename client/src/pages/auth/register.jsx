@@ -1,11 +1,11 @@
 import CommonForm from "@/components/common/form";
 import { registerFormControls } from "@/config";
 import { useState } from "react";
-import { Link } from "react-router-dom"; // Add this line to import the Link component
+import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { registerUser } from "@/store/auth-slice";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Store } from "lucide-react";
 
 const initialState = {
   userName: "",
@@ -23,43 +23,52 @@ function AuthRegister() {
     event.preventDefault();
     dispatch(registerUser(formData)).then((data) => {
       if (data?.payload?.success) {
-        toast({
-          title: data?.payload?.message,
-        });
+        toast({ title: data?.payload?.message });
         navigate("/auth/login");
       } else {
-        toast({
-          title: data?.payload?.message,
-          variant: "destructive",
-        });
+        toast({ title: data?.payload?.message, variant: "destructive" });
       }
     });
   }
 
-
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Create new account
+    <div className="mx-auto w-full max-w-sm space-y-8 animate-fade-in">
+      {/* Mobile logo */}
+      <div className="flex items-center gap-2.5 lg:hidden justify-center mb-4">
+        <div className="h-9 w-9 rounded-lg bg-gradient flex items-center justify-center">
+          <Store className="h-4 w-4 text-white" />
+        </div>
+        <span className="text-xl font-bold">
+          Nova<span className="text-gradient">Shop</span>
+        </span>
+      </div>
+
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Create your account
         </h1>
-        <p className="mt-2">
-          Already have an account
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Already have an account?{" "}
           <Link
-            className="font-medium ml-2 text-primary hover:underline"
+            className="font-semibold text-primary hover:underline"
             to="/auth/login"
           >
-            Login
+            Sign in
           </Link>
         </p>
       </div>
+
       <CommonForm
         formControls={registerFormControls}
-        buttonText={"Sign Up"}
+        buttonText="Create Account"
         formData={formData}
         setFormData={setFormData}
         onSubmit={onSubmit}
       />
+
+      <p className="text-xs text-center text-muted-foreground">
+        By creating an account, you agree to our Terms of Service and Privacy Policy.
+      </p>
     </div>
   );
 }

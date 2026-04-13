@@ -51,7 +51,10 @@ function AdminProducts() {
       ? dispatch(
           editProduct({
             id: currentEditedId,
-            formData,
+            formData: {
+              ...formData,
+              image: uploadedImageUrl || formData.image,
+            },
           })
         ).then((data) => {
 
@@ -115,9 +118,11 @@ function AdminProducts() {
                 setFormData={setFormData}
                 setOpenCreateProductsDialog={setOpenCreateProductsDialog}
                 setCurrentEditedId={setCurrentEditedId}
+                setImageFile={setImageFile}
+                setUploadedImageUrl={setUploadedImageUrl}
                 product={productItem}
                 handleDelete={handleDelete}
-              />
+              />              
             ))
           : null}
       </div>
@@ -142,7 +147,7 @@ function AdminProducts() {
             setUploadedImageUrl={setUploadedImageUrl}
             setImageLoadingState={setImageLoadingState}
             imageLoadingState={imageLoadingState}
-            isEditMode={currentEditedId !== null}
+            isEditMode={false}
           />
           <div className="py-6">
             <CommonForm

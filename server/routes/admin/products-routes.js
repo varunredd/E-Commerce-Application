@@ -12,7 +12,7 @@ const { authMiddleware, requireRole } = require("../../controllers/auth/auth-con
 const router = express.Router();
 
 // All admin product routes require auth + admin role
-router.use(authMiddleware, requireRole("admin"));
+router.use(authMiddleware, requireRole("admin", "super_admin"));
 
 router.post("/upload-image", upload.single("my_file"), handleImageUpload);
 router.post("/add", addProduct);

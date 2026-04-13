@@ -3,22 +3,29 @@ import { Fragment } from "react";
 import { Label } from "../ui/label";
 import { Checkbox } from "../ui/checkbox";
 import { Separator } from "../ui/separator";
-import PropTypes from 'prop-types';
+import { SlidersHorizontal } from "lucide-react";
+import PropTypes from "prop-types";
 
 function ProductFilter({ filters, handleFilter }) {
   return (
-    <div className="bg-background rounded-lg shadow-sm">
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-extrabold">Filters</h2>
+    <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+      <div className="p-5 border-b flex items-center gap-2">
+        <SlidersHorizontal className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-bold uppercase tracking-wider">Filters</h2>
       </div>
-      <div className="p-4 space-y-4">
+      <div className="p-5 space-y-5">
         {Object.keys(filterOptions).map((keyItem) => (
           <Fragment key={keyItem}>
             <div>
-              <h3 className="text-base font-bold">{keyItem}</h3>
-              <div className="grid gap-2 mt-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                {keyItem}
+              </h3>
+              <div className="grid gap-2.5">
                 {filterOptions[keyItem].map((option) => (
-                  <Label key={option.id} className="flex font-medium items-center gap-2 ">
+                  <Label
+                    key={option.id}
+                    className="flex items-center gap-2.5 text-sm font-medium cursor-pointer hover:text-primary transition-colors"
+                  >
                     <Checkbox
                       checked={
                         filters &&
@@ -27,20 +34,20 @@ function ProductFilter({ filters, handleFilter }) {
                         filters[keyItem].indexOf(option.id) > -1
                       }
                       onCheckedChange={() => handleFilter(keyItem, option.id)}
+                      className="rounded"
                     />
                     {option.label}
                   </Label>
                 ))}
               </div>
             </div>
-            <Separator />
+            <Separator className="last:hidden" />
           </Fragment>
         ))}
       </div>
     </div>
   );
 }
-
 
 ProductFilter.propTypes = {
   filters: PropTypes.object,
