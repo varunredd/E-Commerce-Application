@@ -1,5 +1,15 @@
 const mongoose = require("mongoose");
 
+const ShippingEventSchema = new mongoose.Schema(
+  {
+    status: { type: String, required: true },
+    location: { type: String, default: "" },
+    timestamp: { type: Date, required: true },
+    description: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const OrderSchema = new mongoose.Schema(
   {
     userId: {
@@ -35,8 +45,6 @@ const OrderSchema = new mongoose.Schema(
           required: true,
           min: 1,
         },
-
-        // product ownership for multi-admin order visibility
         ownerAdminId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
@@ -85,6 +93,14 @@ const OrderSchema = new mongoose.Schema(
     payerId: {
       type: String,
       default: "",
+    },
+    shipping: {
+      carrier: { type: String, default: "" },
+      trackingNumber: { type: String, default: "" },
+      estimatedDelivery: { type: Date },
+      shippedAt: { type: Date },
+      deliveredAt: { type: Date },
+      events: [ShippingEventSchema],
     },
   },
   { timestamps: true }

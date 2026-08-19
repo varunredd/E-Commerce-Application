@@ -1,4 +1,5 @@
 const Order = require("../../models/Order");
+const { progressShippingTimeline } = require("../../helpers/shipping");
 
 const getAdminUserId = (req) => req.user?.id || req.user?._id;
 
@@ -71,6 +72,10 @@ const getOrderDetailsForAdmin = async (req, res) => {
         success: false,
         message: "Order not found!",
       });
+    }
+
+    if (progressShippingTimeline(order)) {
+      await order.save();
     }
 
     if (role !== "super_admin") {

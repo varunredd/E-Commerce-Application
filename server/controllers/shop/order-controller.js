@@ -5,6 +5,8 @@ const Product = require("../../models/Product");
 const User = require("../../models/User");
 const { sendOrderConfirmationEmail } = require("../../helpers/email");
 const { syncBusinessContext, isConfigured: isJobformConfigured } = require("../../helpers/jobform-integration");
+const { generateDemoShipment, progressShippingTimeline } = require("../../helpers/shipping");
+const { sendShippingEmail } = require("../../helpers/email");
 
 const createOrder = async (req, res) => {
   try {
@@ -196,14 +198,20 @@ const capturePayment = async (req, res) => {
 
     const getCartId = order.cartId;
     await Cart.findByIdAndDelete(getCartId);
+
+    // Generate demo shipment
+    order.shipping = generateDemoShipment(order);
     await order.save();
 
-    // Send order confirmation email + sync to Jobform (fire-and-forget)
+    // Post-capture tasks (fire-and-forget)
     User.findById(userId)
       .then(async (u) => {
         if (!u) return;
         sendOrderConfirmationEmail(u.email, u.userName, order).catch((err) =>
           console.error("Order email failed:", err.message)
+        );
+        sendShippingEmail(u.email, u.userName, order).catch((err) =>
+          console.error("Shipping email failed:", err.message)
         );
         if (isJobformConfigured()) {
           const allOrders = await Order.find({ userId }).sort({ orderDate: -1 }).limit(20);
@@ -266,6 +274,11 @@ const getOrderDetails = async (req, res) => {
         success: false,
         message: "Order not found!",
       });
+    }
+
+    // Progress demo shipping timeline based on elapsed time
+    if (progressShippingTimeline(order)) {
+      await order.save();
     }
 
     res.status(200).json({

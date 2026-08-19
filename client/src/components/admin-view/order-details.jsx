@@ -163,6 +163,31 @@ function AdminOrderDetailsView({ orderDetails }) {
           </div>
         </div>
 
+        {orderDetails?.shipping?.trackingNumber && (
+          <div className="grid gap-2">
+            <div className="font-medium">Tracking</div>
+            <div className="grid gap-0.5 text-muted-foreground text-sm">
+              <span>Carrier: {orderDetails.shipping.carrier}</span>
+              <span className="font-mono">Tracking #: {orderDetails.shipping.trackingNumber}</span>
+              {orderDetails.shipping.estimatedDelivery && (
+                <span>
+                  Est. Delivery:{" "}
+                  {new Date(orderDetails.shipping.estimatedDelivery).toLocaleDateString("en-US", {
+                    weekday: "short", month: "short", day: "numeric",
+                  })}
+                </span>
+              )}
+              {orderDetails.shipping.deliveredAt && (
+                <span className="text-green-600 font-medium">
+                  Delivered: {new Date(orderDetails.shipping.deliveredAt).toLocaleDateString("en-US", {
+                    month: "short", day: "numeric", year: "numeric",
+                  })}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         <div>
           <CommonForm
             formControls={[
