@@ -24,6 +24,7 @@ const shopOrderRouter = require("./routes/shop/order-routes");
 const shopSearchRouter = require("./routes/shop/search-routes");
 const shopReviewRouter = require("./routes/shop/review-routes");
 const commonFeatureRouter = require("./routes/common/feature-routes");
+const supportIntegrationRouter = require("./routes/integrations/support-routes");
 
 // Connect to MongoDB
 mongoose
@@ -91,6 +92,7 @@ app.use("/api/shop/order", apiLimiter, shopOrderRouter);
 app.use("/api/shop/search", apiLimiter, shopSearchRouter);
 app.use("/api/shop/review", apiLimiter, shopReviewRouter);
 app.use("/api/common/feature", apiLimiter, commonFeatureRouter);
+app.use("/api/integrations/support", apiLimiter, supportIntegrationRouter);
 
 // Centralized error handler
 app.use((err, req, res, _next) => {

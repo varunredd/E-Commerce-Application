@@ -2,6 +2,9 @@ const paypal = require("../../helpers/paypal");
 const Order = require("../../models/Order");
 const Cart = require("../../models/Cart");
 const Product = require("../../models/Product");
+const User = require("../../models/User");
+const { sendOrderConfirmationEmail } = require("../../helpers/email");
+const { syncBusinessContext, isConfigured: isJobformConfigured } = require("../../helpers/jobform-integration");
 
 const createOrder = async (req, res) => {
   try {
@@ -194,6 +197,22 @@ const capturePayment = async (req, res) => {
     const getCartId = order.cartId;
     await Cart.findByIdAndDelete(getCartId);
     await order.save();
+
+    // Send order confirmation email + sync to Jobform (fire-and-forget)
+    User.findById(userId)
+      .then(async (u) => {
+        if (!u) return;
+        sendOrderConfirmationEmail(u.email, u.userName, order).catch((err) =>
+          console.error("Order email failed:", err.message)
+        );
+        if (isJobformConfigured()) {
+          const allOrders = await Order.find({ userId }).sort({ orderDate: -1 }).limit(20);
+          syncBusinessContext(u, allOrders).catch((err) =>
+            console.error("Jobform sync failed:", err.message)
+          );
+        }
+      })
+      .catch((err) => console.error("Post-capture tasks failed:", err.message));
 
     res.status(200).json({
       success: true,

@@ -63,6 +63,15 @@ function AuthLogin() {
         onSubmit={onSubmit}
       />
 
+      <div className="text-center">
+        <Link
+          to="/auth/forgot-password"
+          className="text-sm text-muted-foreground hover:text-primary hover:underline"
+        >
+          Forgot your password?
+        </Link>
+      </div>
+
       <p className="text-xs text-center text-muted-foreground">
         By signing in, you agree to our Terms of Service and Privacy Policy.
       </p>
