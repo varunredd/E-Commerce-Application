@@ -1,4 +1,5 @@
 require("dotenv").config();
+const path = require("path");
 const express = require("express");
 const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
@@ -38,9 +39,10 @@ mongoose
 const app = express();
 const PORT = process.env.PORT || 5011;
 
-// Security headers
+// Security headers — relax CSP for the React SPA
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false,
 }));
 
 // Rate limiting
@@ -60,10 +62,14 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Middleware
+// CORS — in production with same-origin deploy, still needed for cookie handling
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((s) => s.trim())
+  : ["http://localhost:5173"];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: allowedOrigins,
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization", "Cache-Control", "Expires", "Pragma"],
     credentials: true,
@@ -93,6 +99,14 @@ app.use("/api/shop/search", apiLimiter, shopSearchRouter);
 app.use("/api/shop/review", apiLimiter, shopReviewRouter);
 app.use("/api/common/feature", apiLimiter, commonFeatureRouter);
 app.use("/api/integrations/support", apiLimiter, supportIntegrationRouter);
+
+// Serve static React build in production
+const clientBuildPath = path.join(__dirname, "..", "client", "dist");
+app.use(express.static(clientBuildPath));
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api/")) return next();
+  res.sendFile(path.join(clientBuildPath, "index.html"));
+});
 
 // Centralized error handler
 app.use((err, req, res, _next) => {
