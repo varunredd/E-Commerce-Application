@@ -78,6 +78,31 @@ const OrderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    refundedAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    returnStatus: {
+      type: String,
+      default: "",
+    },
+    returnShipping: {
+      carrier: { type: String, default: "" },
+      trackingNumber: { type: String, default: "" },
+      events: [ShippingEventSchema],
+    },
+    refundRecords: [
+      {
+        refundId: { type: String, required: true },
+        itemId: { type: String, default: "" },
+        quantity: { type: Number, default: 1 },
+        amount: { type: Number, default: 0 },
+        reason: { type: String, default: "" },
+        condition: { type: String, default: "" },
+        processedAt: { type: Date, default: Date.now },
+      },
+    ],
     orderDate: {
       type: Date,
       default: Date.now,
