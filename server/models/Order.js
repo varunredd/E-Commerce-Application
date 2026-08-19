@@ -90,6 +90,12 @@ const OrderSchema = new mongoose.Schema(
     returnShipping: {
       carrier: { type: String, default: "" },
       trackingNumber: { type: String, default: "" },
+      pickupScheduledAt: { type: Date },
+      pickupWindowStart: { type: Date },
+      pickupWindowEnd: { type: Date },
+      agentName: { type: String, default: "" },
+      agentPhone: { type: String, default: "" },
+      estimatedRefundAt: { type: Date },
       events: [ShippingEventSchema],
     },
     refundRecords: [
@@ -101,6 +107,8 @@ const OrderSchema = new mongoose.Schema(
         reason: { type: String, default: "" },
         condition: { type: String, default: "" },
         processedAt: { type: Date, default: Date.now },
+        itemTitle: { type: String, default: "" },
+        itemSku: { type: String, default: "" },
       },
     ],
     orderDate: {

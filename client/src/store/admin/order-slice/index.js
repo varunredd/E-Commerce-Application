@@ -38,10 +38,11 @@ export const getOrderDetailsForAdmin = createAsyncThunk(
 
 export const updateOrderStatus = createAsyncThunk(
   "/order/updateOrderStatus",
-  async ({ id, orderStatus }, { dispatch, rejectWithValue }) => {
+  async ({ id, orderStatus, returnStatus }, { dispatch, rejectWithValue }) => {
     try {
       const response = await api.put(`/api/admin/orders/update/${id}`, {
         orderStatus,
+        returnStatus,
       });
 
       if (response?.data?.success) {

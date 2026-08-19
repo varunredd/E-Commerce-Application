@@ -18,6 +18,11 @@ import {
   resetOrderDetails,
 } from "@/store/shop/order-slice";
 import { Badge } from "../ui/badge";
+import {
+  getOrderStatusBadgeClass,
+  getReturnStatusBadgeClass,
+  getReturnStatusLabel,
+} from "@/lib/return-status";
 
 function ShoppingOrders() {
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
@@ -40,6 +45,26 @@ function ShoppingOrders() {
 
   function getOrderItemCount(orderItem) {
     return Array.isArray(orderItem?.cartItems) ? orderItem.cartItems.length : 0;
+  }
+
+  function renderStatus(orderItem) {
+    if (orderItem?.returnStatus) {
+      return (
+        <Badge
+          className={`py-1 px-3 ${getReturnStatusBadgeClass(orderItem.returnStatus)}`}
+        >
+          {getReturnStatusLabel(orderItem.returnStatus)}
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge
+        className={`py-1 px-3 ${getOrderStatusBadgeClass(orderItem?.orderStatus)}`}
+      >
+        {orderItem?.orderStatus}
+      </Badge>
+    );
   }
 
   useEffect(() => {
@@ -70,7 +95,7 @@ function ShoppingOrders() {
                 <TableRow>
                   <TableHead>Order ID</TableHead>
                   <TableHead>Order Date</TableHead>
-                  <TableHead>Order Status</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Items</TableHead>
                   <TableHead>Order Price</TableHead>
                   <TableHead>
@@ -82,8 +107,8 @@ function ShoppingOrders() {
               <TableBody>
                 {orderList.map((orderItem) => (
                   <TableRow key={orderItem?._id}>
-                    <TableCell className="font-medium">
-                      {orderItem?._id}
+                    <TableCell className="font-medium font-mono text-xs">
+                      #{String(orderItem?._id || "").slice(-8).toUpperCase()}
                     </TableCell>
 
                     <TableCell>
@@ -92,26 +117,19 @@ function ShoppingOrders() {
                         : "-"}
                     </TableCell>
 
-                    <TableCell>
-                      <Badge
-                        className={`py-1 px-3 ${
-                          orderItem?.orderStatus === "confirmed"
-                            ? "bg-green-500"
-                            : orderItem?.orderStatus === "rejected"
-                            ? "bg-red-600"
-                            : orderItem?.orderStatus === "inShipping"
-                            ? "bg-blue-600"
-                            : "bg-black"
-                        }`}
-                      >
-                        {orderItem?.orderStatus}
-                      </Badge>
-                    </TableCell>
+                    <TableCell>{renderStatus(orderItem)}</TableCell>
 
                     <TableCell>{getOrderItemCount(orderItem)}</TableCell>
 
                     <TableCell>
-                      ${Number(orderItem?.totalAmount || 0).toFixed(2)}
+                      <div>
+                        ${Number(orderItem?.totalAmount || 0).toFixed(2)}
+                        {Number(orderItem?.refundedAmount || 0) > 0 && (
+                          <p className="text-xs text-emerald-600 mt-0.5">
+                            Refunded ${Number(orderItem.refundedAmount).toFixed(2)}
+                          </p>
+                        )}
+                      </div>
                     </TableCell>
 
                     <TableCell>

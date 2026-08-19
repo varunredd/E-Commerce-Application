@@ -1,6 +1,11 @@
 const User = require("../../models/User");
 const Order = require("../../models/Order");
 const { buildBusinessSnapshot, verifyJobformRequest } = require("../../helpers/jobform-integration");
+const {
+  resolveItemFromOrder,
+  initializeReturnPickup,
+} = require("../../helpers/return-logistics");
+const { sendRefundInitiatedEmail } = require("../../helpers/email");
 
 const exportBusinessContext = async (req, res) => {
   try {
@@ -103,29 +108,14 @@ const applyRefundCompleted = async (req, res) => {
         orderId: String(order._id),
         refundedAmount: order.refundedAmount,
         returnStatus: order.returnStatus,
+        returnShipping: order.returnShipping,
         returnTrackingNumber: order.returnShipping?.trackingNumber || "",
       });
     }
 
     const refundAmount = amountCents / 100;
-    order.refundedAmount = Math.round(((order.refundedAmount || 0) + refundAmount) * 100) / 100;
-    order.returnStatus = returnStatus || "REFUND_APPROVED";
-    order.returnShipping = {
-      carrier: "NovaShop Returns",
-      trackingNumber: `RTN-${String(refundId).slice(-8).toUpperCase()}`,
-      events: [
-        {
-          status: "RETURN_INITIATED",
-          location: "",
-          timestamp: new Date(),
-          description: "Refund approved by Jobform support agent",
-        },
-      ],
-    };
-    if (!Array.isArray(order.refundRecords)) {
-      order.refundRecords = [];
-    }
-    order.refundRecords.push({
+    const itemMeta = resolveItemFromOrder(order, itemId);
+    const refundRecord = {
       refundId: String(refundId),
       itemId: String(itemId),
       quantity,
@@ -133,16 +123,44 @@ const applyRefundCompleted = async (req, res) => {
       reason: reason || "",
       condition: condition || "",
       processedAt: new Date(),
-    });
+      itemTitle: itemMeta.title,
+      itemSku: itemMeta.sku,
+    };
+
+    order.refundedAmount =
+      Math.round(((order.refundedAmount || 0) + refundAmount) * 100) / 100;
+    order.returnStatus = returnStatus || "REFUND_APPROVED";
+
+    if (!Array.isArray(order.refundRecords)) {
+      order.refundRecords = [];
+    }
+    order.refundRecords.push(refundRecord);
+
+    const returnShipping = initializeReturnPickup(order, refundId);
     order.orderUpdateDate = new Date();
     await order.save();
+
+    User.findById(order.userId)
+      .then((user) => {
+        if (!user) return;
+        return sendRefundInitiatedEmail(
+          user.email,
+          user.userName,
+          order,
+          refundRecord,
+          returnShipping,
+        );
+      })
+      .catch((err) => console.error("Refund initiated email failed:", err.message));
 
     return res.status(200).json({
       success: true,
       orderId: String(order._id),
       refundedAmount: order.refundedAmount,
       returnStatus: order.returnStatus,
-      returnTrackingNumber: order.returnShipping.trackingNumber,
+      returnShipping: order.returnShipping,
+      returnTrackingNumber: returnShipping.trackingNumber,
+      refundRecord,
     });
   } catch (error) {
     console.error("Jobform refund-completed error:", error.message);

@@ -160,6 +160,75 @@ async function sendShippingEmail(to, userName, order) {
   });
 }
 
+function formatPickupWindow(returnShipping) {
+  if (!returnShipping?.pickupScheduledAt) return "We'll contact you shortly";
+  const date = new Date(returnShipping.pickupScheduledAt).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  return `${date}, 10:00 AM – 2:00 PM`;
+}
+
+async function sendRefundInitiatedEmail(to, userName, order, refundRecord, returnShipping) {
+  const shortId = String(order._id).slice(-8).toUpperCase();
+  return sendEmail({
+    to,
+    subject: `Return initiated for order #${shortId} — pickup scheduled`,
+    html: baseTemplate(`
+      <h2 style="font-size: 20px; margin-bottom: 16px;">Return Initiated</h2>
+      <p style="line-height: 1.6;">Hi ${userName}, your refund request was approved. We've scheduled a return pickup.</p>
+      <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; margin: 24px 0;">
+        <p style="margin: 0 0 4px;"><strong>Item:</strong> ${refundRecord.itemTitle || "Order item"}</p>
+        <p style="margin: 0 0 4px;"><strong>Refund amount:</strong> $${Number(refundRecord.amount || 0).toFixed(2)}</p>
+        <p style="margin: 0 0 4px;"><strong>Pickup window:</strong> ${formatPickupWindow(returnShipping)}</p>
+        <p style="margin: 0 0 4px;"><strong>Agent:</strong> ${returnShipping.agentName || "NovaShop Returns"} · ${returnShipping.agentPhone || ""}</p>
+        <p style="margin: 0;"><strong>Return tracking:</strong> ${returnShipping.trackingNumber || "Pending"}</p>
+      </div>
+      <p style="line-height: 1.6; color: #555;">Keep the item in original packaging. The agent will call ~30 minutes before arrival.</p>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${CLIENT_URL}/shop/account" style="background: #000; color: #fff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">View Return Details</a>
+      </div>
+    `),
+  });
+}
+
+const RETURN_STATUS_EMAIL_SUBJECTS = {
+  PICKED_UP: "Your return item has been picked up",
+  RECEIVED: "We received your return",
+  REFUND_COMPLETED: "Your refund is complete",
+};
+
+async function sendReturnStatusUpdateEmail(to, userName, order, newStatus, latestEvent) {
+  const subject =
+    RETURN_STATUS_EMAIL_SUBJECTS[newStatus] ||
+    `Return update for order #${String(order._id).slice(-8).toUpperCase()}`;
+  const shortId = String(order._id).slice(-8).toUpperCase();
+
+  return sendEmail({
+    to,
+    subject: `${subject} — #${shortId}`,
+    html: baseTemplate(`
+      <h2 style="font-size: 20px; margin-bottom: 16px;">Return Update</h2>
+      <p style="line-height: 1.6;">Hi ${userName}, here's an update on your return for order #${shortId}.</p>
+      <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; margin: 24px 0;">
+        <p style="margin: 0 0 4px;"><strong>Status:</strong> ${newStatus.replace(/_/g, " ")}</p>
+        <p style="margin: 0;">${latestEvent?.description || "Your return is progressing."}</p>
+        ${returnShippingTracking(order)}
+      </div>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${CLIENT_URL}/shop/account" style="background: #000; color: #fff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">View Order</a>
+      </div>
+    `),
+  });
+}
+
+function returnShippingTracking(order) {
+  const tracking = order.returnShipping?.trackingNumber;
+  if (!tracking) return "";
+  return `<p style="margin: 8px 0 0;"><strong>Tracking:</strong> ${tracking}</p>`;
+}
+
 module.exports = {
   sendEmail,
   sendEmailVerificationEmail,
@@ -167,4 +236,6 @@ module.exports = {
   sendPasswordResetEmail,
   sendOrderConfirmationEmail,
   sendShippingEmail,
+  sendRefundInitiatedEmail,
+  sendReturnStatusUpdateEmail,
 };

@@ -13,8 +13,15 @@ import {
 } from "@/store/admin/order-slice";
 import { useToast } from "../ui/use-toast";
 
+import {
+  getReturnStatusBadgeClass,
+  getReturnStatusLabel,
+  getOrderStatusBadgeClass,
+} from "@/lib/return-status";
+
 const initialFormData = {
   status: "",
+  returnStatus: "",
 };
 
 function AdminOrderDetailsView({ orderDetails }) {
@@ -24,8 +31,11 @@ function AdminOrderDetailsView({ orderDetails }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (orderDetails?.orderStatus) {
-      setFormData({ status: orderDetails.orderStatus });
+    if (orderDetails) {
+      setFormData({
+        status: orderDetails.orderStatus || "",
+        returnStatus: orderDetails.returnStatus || "",
+      });
     } else {
       setFormData(initialFormData);
     }
@@ -47,12 +57,16 @@ function AdminOrderDetailsView({ orderDetails }) {
 
   function handleUpdateStatus(event) {
     event.preventDefault();
-    const { status } = formData;
+    const { status, returnStatus } = formData;
 
     if (!status || !orderDetails?._id) return;
 
     dispatch(
-      updateOrderStatus({ id: orderDetails._id, orderStatus: status })
+      updateOrderStatus({
+        id: orderDetails._id,
+        orderStatus: status,
+        returnStatus: returnStatus || "",
+      })
     ).then((data) => {
       if (data?.payload?.success) {
         dispatch(getOrderDetailsForAdmin(orderDetails._id));
@@ -104,22 +118,32 @@ function AdminOrderDetailsView({ orderDetails }) {
 
           <div className="mt-2 flex items-center justify-between">
             <p className="font-medium">Order Status</p>
-            <Label>
-              <Badge
-                className={`py-1 px-3 ${
-                  orderDetails?.orderStatus === "confirmed"
-                    ? "bg-green-500"
-                    : orderDetails?.orderStatus === "rejected"
-                    ? "bg-red-600"
-                    : orderDetails?.orderStatus === "inShipping"
-                    ? "bg-blue-600"
-                    : "bg-black"
-                }`}
-              >
-                {orderDetails?.orderStatus || "-"}
-              </Badge>
-            </Label>
+            <Badge
+              className={`py-1 px-3 ${getOrderStatusBadgeClass(orderDetails?.orderStatus)}`}
+            >
+              {orderDetails?.orderStatus || "-"}
+            </Badge>
           </div>
+
+          {orderDetails?.returnStatus && (
+            <div className="mt-2 flex items-center justify-between">
+              <p className="font-medium">Return Status</p>
+              <Badge
+                className={`py-1 px-3 ${getReturnStatusBadgeClass(orderDetails.returnStatus)}`}
+              >
+                {getReturnStatusLabel(orderDetails.returnStatus)}
+              </Badge>
+            </div>
+          )}
+
+          {Number(orderDetails?.refundedAmount || 0) > 0 && (
+            <div className="mt-2 flex items-center justify-between">
+              <p className="font-medium">Refunded</p>
+              <Label className="text-emerald-600 font-semibold">
+                ${Number(orderDetails.refundedAmount).toFixed(2)}
+              </Label>
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -188,6 +212,44 @@ function AdminOrderDetailsView({ orderDetails }) {
           </div>
         )}
 
+        {orderDetails?.returnStatus && (
+          <div className="grid gap-4">
+            <div className="font-medium">Return & Refund</div>
+            <div className="rounded-md border p-3 text-sm space-y-2">
+              {orderDetails.refundRecords?.map((record) => (
+                <div key={record.refundId} className="flex justify-between gap-2">
+                  <span>
+                    {record.itemTitle || record.itemId} · Qty {record.quantity}
+                  </span>
+                  <span className="font-medium">${Number(record.amount || 0).toFixed(2)}</span>
+                </div>
+              ))}
+              {orderDetails.returnShipping?.trackingNumber && (
+                <p className="font-mono text-xs pt-2 border-t">
+                  Return tracking: {orderDetails.returnShipping.trackingNumber}
+                </p>
+              )}
+              {orderDetails.returnShipping?.agentName && (
+                <p className="text-muted-foreground text-xs">
+                  Agent: {orderDetails.returnShipping.agentName}
+                  {orderDetails.returnShipping.agentPhone &&
+                    ` · ${orderDetails.returnShipping.agentPhone}`}
+                </p>
+              )}
+              {orderDetails.returnShipping?.events?.length > 0 && (
+                <ul className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
+                  {orderDetails.returnShipping.events.map((event, idx) => (
+                    <li key={idx}>
+                      {event.description} ·{" "}
+                      {new Date(event.timestamp).toLocaleString()}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+
         <div>
           <CommonForm
             formControls={[
@@ -203,10 +265,25 @@ function AdminOrderDetailsView({ orderDetails }) {
                   { id: "rejected", label: "Rejected" },
                 ],
               },
+              {
+                label: "Return Status (optional override)",
+                name: "returnStatus",
+                componentType: "select",
+                options: [
+                  { id: "", label: "None" },
+                  { id: "REFUND_APPROVED", label: "Refund initiated" },
+                  { id: "PICKUP_SCHEDULED", label: "Pickup scheduled" },
+                  { id: "PICKED_UP", label: "Item picked up" },
+                  { id: "IN_TRANSIT", label: "Return in transit" },
+                  { id: "RECEIVED", label: "Item received" },
+                  { id: "REFUND_COMPLETED", label: "Refund completed" },
+                  { id: "RETURN_CANCELLED", label: "Return cancelled" },
+                ],
+              },
             ]}
             formData={formData}
             setFormData={setFormData}
-            buttonText={"Update Order Status"}
+            buttonText={"Update Order"}
             onSubmit={handleUpdateStatus}
           />
         </div>

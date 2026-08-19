@@ -2,6 +2,7 @@ const Order = require("../../models/Order");
 const User = require("../../models/User");
 const { progressShippingTimeline } = require("../../helpers/shipping");
 const { syncBusinessContext, isConfigured: isJobformConfigured } = require("../../helpers/jobform-integration");
+const { advanceReturnStatusIfDue } = require("../../helpers/return-logistics");
 
 const getAdminUserId = (req) => req.user?.id || req.user?._id;
 
@@ -80,6 +81,10 @@ const getOrderDetailsForAdmin = async (req, res) => {
       await order.save();
     }
 
+    if (advanceReturnStatusIfDue(order).changed) {
+      await order.save();
+    }
+
     if (role !== "super_admin") {
       const ownedItems = order.cartItems.filter(
         (item) =>
@@ -127,7 +132,7 @@ const getOrderDetailsForAdmin = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { orderStatus } = req.body;
+    const { orderStatus, returnStatus } = req.body;
     const adminUserId = getAdminUserId(req);
     const role = req.user?.role;
 
@@ -155,7 +160,12 @@ const updateOrderStatus = async (req, res) => {
       }
     }
 
-    order.orderStatus = orderStatus;
+    if (orderStatus) {
+      order.orderStatus = orderStatus;
+    }
+    if (returnStatus !== undefined) {
+      order.returnStatus = returnStatus;
+    }
     order.orderUpdateDate = new Date();
 
     await order.save();

@@ -41,6 +41,14 @@ export const getOrderDetails = createAsyncThunk(
   }
 );
 
+export const launchOrderSupport = createAsyncThunk(
+  "/integrations/support/launch",
+  async (orderId) => {
+    const response = await api.post("/api/integrations/support/launch", { orderId });
+    return response.data;
+  }
+);
+
 const shoppingOrderSlice = createSlice({
   name: "shoppingOrderSlice",
   initialState,

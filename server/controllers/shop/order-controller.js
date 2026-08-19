@@ -3,11 +3,38 @@ const Order = require("../../models/Order");
 const Cart = require("../../models/Cart");
 const Product = require("../../models/Product");
 const User = require("../../models/User");
-const { sendOrderConfirmationEmail } = require("../../helpers/email");
+const { sendOrderConfirmationEmail, sendReturnStatusUpdateEmail } = require("../../helpers/email");
 const { syncBusinessContext, isConfigured: isJobformConfigured } = require("../../helpers/jobform-integration");
 const { generateDemoShipment, progressShippingTimeline } = require("../../helpers/shipping");
 const { sendShippingEmail } = require("../../helpers/email");
 const { getPublicAppUrl } = require("../../helpers/app-url");
+const { advanceReturnStatusIfDue } = require("../../helpers/return-logistics");
+
+const RETURN_EMAIL_STATUSES = new Set(["PICKED_UP", "RECEIVED", "REFUND_COMPLETED"]);
+
+async function hydrateOrderForCustomer(order) {
+  let changed = false;
+  if (progressShippingTimeline(order)) changed = true;
+  const returnResult = advanceReturnStatusIfDue(order);
+  if (returnResult.changed) changed = true;
+  if (changed) await order.save();
+  if (returnResult.changed && RETURN_EMAIL_STATUSES.has(returnResult.newStatus)) {
+    User.findById(order.userId)
+      .then((user) => {
+        if (!user) return;
+        const latestEvent = order.returnShipping?.events?.at(-1);
+        return sendReturnStatusUpdateEmail(
+          user.email,
+          user.userName,
+          order,
+          returnResult.newStatus,
+          latestEvent,
+        );
+      })
+      .catch((err) => console.error("Return status email failed:", err.message));
+  }
+  return order;
+}
 
 const createOrder = async (req, res) => {
   try {
@@ -250,9 +277,15 @@ const getAllOrdersByUser = async (req, res) => {
       });
     }
 
+    for (const order of orders) {
+      await hydrateOrderForCustomer(order);
+    }
+
+    const refreshed = await Order.find({ userId }).sort({ orderDate: -1 });
+
     res.status(200).json({
       success: true,
-      data: orders,
+      data: refreshed,
     });
   } catch (error) {
     console.error("Get orders error:", error.message);
@@ -277,10 +310,7 @@ const getOrderDetails = async (req, res) => {
       });
     }
 
-    // Progress demo shipping timeline based on elapsed time
-    if (progressShippingTimeline(order)) {
-      await order.save();
-    }
+    await hydrateOrderForCustomer(order);
 
     res.status(200).json({
       success: true,
