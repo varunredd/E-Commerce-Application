@@ -2,6 +2,9 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN_LENGTH = 8;
+
 // Register
 const registerUser = async (req, res) => {
   const { userName, email, password } = req.body;
@@ -12,8 +15,34 @@ const registerUser = async (req, res) => {
       .json({ success: false, message: "All fields are required" });
   }
 
+  if (userName.trim().length < 2 || userName.trim().length > 30) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Username must be 2–30 characters" });
+  }
+
+  if (!EMAIL_REGEX.test(email)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Please enter a valid email address" });
+  }
+
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    return res.status(400).json({
+      success: false,
+      message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+    });
+  }
+
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must include uppercase, lowercase, and a number",
+    });
+  }
+
   try {
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: email.toLowerCase() });
 
     if (userExists) {
       return res
@@ -24,8 +53,8 @@ const registerUser = async (req, res) => {
     const hashPassword = await bcrypt.hash(password, 12);
 
     const user = new User({
-      userName,
-      email,
+      userName: userName.trim(),
+      email: email.toLowerCase().trim(),
       password: hashPassword,
     });
 
@@ -52,7 +81,7 @@ const loginUser = async (req, res) => {
   }
 
   try {
-    const checkUser = await User.findOne({ email });
+    const checkUser = await User.findOne({ email: email.toLowerCase().trim() });
 
     if (!checkUser) {
       return res
@@ -71,21 +100,20 @@ const loginUser = async (req, res) => {
     const token = jwt.sign(
       {
         id: checkUser._id,
-        _id: checkUser._id,
         email: checkUser.email,
         role: checkUser.role,
         userName: checkUser.userName,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "7d" }
     );
 
     res
       .cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 60 * 60 * 1000,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       })
       .json({
         success: true,
@@ -106,7 +134,11 @@ const loginUser = async (req, res) => {
 // Logout
 const logoutUser = async (req, res) => {
   res
-    .clearCookie("token")
+    .clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    })
     .json({ success: true, message: "Logout Successful" });
 };
 

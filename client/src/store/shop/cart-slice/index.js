@@ -8,32 +8,32 @@ const initialState = {
 
 export const addToCart = createAsyncThunk(
   "cart/addToCart",
-  async ({ userId, productId, quantity }) => {
-    const response = await api.post("/api/shop/cart/add", { userId, productId, quantity });
+  async ({ productId, quantity }) => {
+    const response = await api.post("/api/shop/cart/add", { productId, quantity });
     return response.data;
   }
 );
 
 export const fetchCartItems = createAsyncThunk(
   "cart/fetchCartItems",
-  async (userId) => {
-    const response = await api.get(`/api/shop/cart/get/${userId}`);
+  async () => {
+    const response = await api.get("/api/shop/cart/get");
     return response.data;
   }
 );
 
 export const deleteCartItem = createAsyncThunk(
   "cart/deleteCartItem",
-  async ({ userId, productId }) => {
-    const response = await api.delete(`/api/shop/cart/${userId}/${productId}`);
+  async ({ productId }) => {
+    const response = await api.delete(`/api/shop/cart/${productId}`);
     return response.data;
   }
 );
 
 export const updateCartQuantity = createAsyncThunk(
   "cart/updateCartQuantity",
-  async ({ userId, productId, quantity }) => {
-    const response = await api.put("/api/shop/cart/update-cart", { userId, productId, quantity });
+  async ({ productId, quantity }) => {
+    const response = await api.put("/api/shop/cart/update-cart", { productId, quantity });
     return response.data;
   }
 );

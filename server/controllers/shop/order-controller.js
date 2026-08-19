@@ -9,14 +9,7 @@ const createOrder = async (req, res) => {
     const {
       cartItems,
       addressInfo,
-      orderStatus,
       paymentMethod,
-      paymentStatus,
-      totalAmount,
-      orderDate,
-      orderUpdateDate,
-      paymentId,
-      payerId,
       cartId,
     } = req.body;
 
@@ -29,25 +22,56 @@ const createOrder = async (req, res) => {
 
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
 
+    // Fetch real product data from DB to prevent price manipulation
     const productIds = cartItems.map((item) => item.productId);
     const products = await Product.find({ _id: { $in: productIds } });
+
+    if (products.length !== productIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: "One or more products not found",
+      });
+    }
 
     const productMap = new Map(
       products.map((product) => [String(product._id), product])
     );
 
-    const enrichedCartItems = cartItems.map((item) => {
-      const matchedProduct = productMap.get(String(item.productId));
+    // Validate stock and build enriched items with DB prices
+    const enrichedCartItems = [];
+    let serverTotalAmount = 0;
 
-      if (!matchedProduct) {
-        throw new Error(`Product not found for item: ${item.title}`);
+    for (const item of cartItems) {
+      const product = productMap.get(String(item.productId));
+      if (!product) {
+        return res.status(400).json({
+          success: false,
+          message: `Product not found: ${item.productId}`,
+        });
       }
 
-      return {
-        ...item,
-        ownerAdminId: matchedProduct.ownerAdminId || undefined,
-      };
-    });
+      if (product.totalStock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for "${product.title}". Available: ${product.totalStock}`,
+        });
+      }
+
+      const unitPrice = product.salePrice > 0 ? product.salePrice : product.price;
+
+      enrichedCartItems.push({
+        productId: String(product._id),
+        title: product.title,
+        image: product.image,
+        price: unitPrice,
+        quantity: item.quantity,
+        ownerAdminId: product.ownerAdminId || undefined,
+      });
+
+      serverTotalAmount += unitPrice * item.quantity;
+    }
+
+    serverTotalAmount = Math.round(serverTotalAmount * 100) / 100;
 
     const create_payment_json = {
       intent: "sale",
@@ -71,7 +95,7 @@ const createOrder = async (req, res) => {
           },
           amount: {
             currency: "USD",
-            total: Number(totalAmount).toFixed(2),
+            total: Number(serverTotalAmount).toFixed(2),
           },
           description: "E-Commerce Order",
         },
@@ -92,14 +116,12 @@ const createOrder = async (req, res) => {
         cartId,
         cartItems: enrichedCartItems,
         addressInfo,
-        orderStatus,
-        paymentMethod,
-        paymentStatus,
-        totalAmount,
-        orderDate,
-        orderUpdateDate,
-        paymentId,
-        payerId,
+        orderStatus: "pending",
+        paymentMethod: paymentMethod || "paypal",
+        paymentStatus: "pending",
+        totalAmount: serverTotalAmount,
+        orderDate: new Date(),
+        orderUpdateDate: new Date(),
       });
 
       await newlyCreatedOrder.save();
@@ -125,9 +147,10 @@ const createOrder = async (req, res) => {
 
 const capturePayment = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { paymentId, payerId, orderId } = req.body;
 
-    let order = await Order.findById(orderId);
+    let order = await Order.findOne({ _id: orderId, userId });
 
     if (!order) {
       return res.status(404).json({
@@ -135,6 +158,17 @@ const capturePayment = async (req, res) => {
         message: "Order not found",
       });
     }
+
+    if (order.paymentStatus === "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Order already paid",
+      });
+    }
+
+    // Demo mode: skip paypal.payment.execute() since we're using sandbox
+    // In production with real payments, you'd call:
+    // paypal.payment.execute(paymentId, { payer_id: payerId }, callback)
 
     order.paymentStatus = "paid";
     order.orderStatus = "confirmed";

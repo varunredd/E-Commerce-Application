@@ -6,7 +6,6 @@ import { deleteCartItem, updateCartQuantity } from "@/store/shop/cart-slice";
 import { useToast } from "../ui/use-toast";
 
 function UserCartItemsContent({ cartItem }) {
-  const { user } = useSelector((state) => state.auth);
   const { cartItems } = useSelector((state) => state.shopCart);
   const { productList } = useSelector((state) => state.shopProducts);
   const dispatch = useDispatch();
@@ -38,7 +37,6 @@ function UserCartItemsContent({ cartItem }) {
 
     dispatch(
       updateCartQuantity({
-        userId: user?.id,
         productId: getCartItem?.productId,
         quantity:
           typeOfAction === "plus"
@@ -54,7 +52,7 @@ function UserCartItemsContent({ cartItem }) {
 
   function handleCartItemDelete(getCartItem) {
     dispatch(
-      deleteCartItem({ userId: user?.id, productId: getCartItem?.productId })
+      deleteCartItem({ productId: getCartItem?.productId })
     ).then((data) => {
       if (data?.payload?.success) {
         toast({ title: "Item removed from cart" });

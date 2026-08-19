@@ -58,13 +58,12 @@ function ProductDetailsDialog({ open, setOpen, productDetails }) {
 
     dispatch(
       addToCart({
-        userId: user?.id,
         productId: getCurrentProductId,
         quantity: 1,
       })
     ).then((data) => {
       if (data?.payload?.success) {
-        dispatch(fetchCartItems(user?.id));
+        dispatch(fetchCartItems());
         toast({ title: "Added to cart!" });
       }
     });
@@ -81,8 +80,6 @@ function ProductDetailsDialog({ open, setOpen, productDetails }) {
     dispatch(
       addReview({
         productId: productDetails?._id,
-        userId: user?.id,
-        userName: user?.userName,
         reviewMessage: reviewMsg,
         reviewValue: rating,
       })

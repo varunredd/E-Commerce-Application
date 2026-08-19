@@ -63,10 +63,10 @@ function SearchProducts() {
       }
     }
     dispatch(
-      addToCart({ userId: user?.id, productId: getCurrentProductId, quantity: 1 })
+      addToCart({ productId: getCurrentProductId, quantity: 1 })
     ).then((data) => {
       if (data?.payload?.success) {
-        dispatch(fetchCartItems(user?.id));
+        dispatch(fetchCartItems());
         toast({ title: "Added to cart!" });
       }
     });

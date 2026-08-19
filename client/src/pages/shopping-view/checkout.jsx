@@ -40,13 +40,9 @@ function ShoppingCheckout() {
     }
 
     const orderData = {
-      userId: user?.id,
       cartId: cartItems?._id,
       cartItems: cartItems.items.map((item) => ({
         productId: item?.productId,
-        title: item?.title,
-        image: item?.image,
-        price: item?.salePrice > 0 ? item?.salePrice : item?.price,
         quantity: item?.quantity,
       })),
       addressInfo: {
@@ -57,14 +53,7 @@ function ShoppingCheckout() {
         phone: currentSelectedAddress?.phone,
         notes: currentSelectedAddress?.notes,
       },
-      orderStatus: "pending",
       paymentMethod: "paypal",
-      paymentStatus: "pending",
-      totalAmount: totalCartAmount,
-      orderDate: new Date(),
-      orderUpdateDate: new Date(),
-      paymentId: "",
-      payerId: "",
     };
 
     dispatch(createNewOrder(orderData)).then((data) => {

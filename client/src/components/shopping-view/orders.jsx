@@ -22,7 +22,6 @@ import { Badge } from "../ui/badge";
 function ShoppingOrders() {
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
   const { orderList, orderDetails, isLoading } = useSelector(
     (state) => state.shopOrder
   );
@@ -44,10 +43,8 @@ function ShoppingOrders() {
   }
 
   useEffect(() => {
-    if (user?.id) {
-      dispatch(getAllOrdersByUserId(user.id));
-    }
-  }, [dispatch, user?.id]);
+    dispatch(getAllOrdersByUserId());
+  }, [dispatch]);
 
   useEffect(() => {
     if (orderDetails !== null) {

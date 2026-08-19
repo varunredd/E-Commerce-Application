@@ -3,9 +3,10 @@ const Product = require("../../models/Product");
 
 const addToCart = async (req, res) => {
   try {
-    const { userId, productId, quantity } = req.body;
+    const userId = req.user.id;
+    const { productId, quantity } = req.body;
 
-    if (!userId || !productId || quantity <= 0) {
+    if (!productId || quantity <= 0) {
       return res.status(400).json({
         success: false,
         message: "Invalid data provided!",
@@ -53,14 +54,7 @@ const addToCart = async (req, res) => {
 
 const fetchCartItems = async (req, res) => {
   try {
-    const { userId } = req.params;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "User id is manadatory!",
-      });
-    }
+    const userId = req.user.id;
 
     const cart = await Cart.findOne({ userId }).populate({
       path: "items.productId",
@@ -110,9 +104,10 @@ const fetchCartItems = async (req, res) => {
 
 const updateCartItemQty = async (req, res) => {
   try {
-    const { userId, productId, quantity } = req.body;
+    const userId = req.user.id;
+    const { productId, quantity } = req.body;
 
-    if (!userId || !productId || quantity <= 0) {
+    if (!productId || quantity <= 0) {
       return res.status(400).json({
         success: false,
         message: "Invalid data provided!",
@@ -173,8 +168,10 @@ const updateCartItemQty = async (req, res) => {
 
 const deleteCartItem = async (req, res) => {
   try {
-    const { userId, productId } = req.params;
-    if (!userId || !productId) {
+    const userId = req.user.id;
+    const { productId } = req.params;
+
+    if (!productId) {
       return res.status(400).json({
         success: false,
         message: "Invalid data provided!",

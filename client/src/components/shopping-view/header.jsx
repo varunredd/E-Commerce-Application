@@ -110,7 +110,7 @@ function HeaderRightContent() {
   }
 
   useEffect(() => {
-    dispatch(fetchCartItems(user?.id));
+    dispatch(fetchCartItems());
   }, [dispatch]);
 
   return (

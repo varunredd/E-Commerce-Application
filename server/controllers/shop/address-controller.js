@@ -2,12 +2,13 @@ const Address = require("../../models/Address");
 
 const addAddress = async (req, res) => {
   try {
-    const { userId, address, city, pincode, phone, notes } = req.body;
+    const userId = req.user.id;
+    const { address, city, pincode, phone, notes } = req.body;
 
-    if (!userId || !address || !city || !pincode || !phone || !notes) {
+    if (!address || !city || !pincode || !phone) {
       return res.status(400).json({
         success: false,
-        message: "Invalid data provided!",
+        message: "Address, city, pincode, and phone are required!",
       });
     }
 
@@ -16,7 +17,7 @@ const addAddress = async (req, res) => {
       address,
       city,
       pincode,
-      notes,
+      notes: notes || "",
       phone,
     });
 
@@ -37,13 +38,7 @@ const addAddress = async (req, res) => {
 
 const fetchAllAddress = async (req, res) => {
   try {
-    const { userId } = req.params;
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "User id is required!",
-      });
-    }
+    const userId = req.user.id;
 
     const addressList = await Address.find({ userId });
 
@@ -62,13 +57,14 @@ const fetchAllAddress = async (req, res) => {
 
 const editAddress = async (req, res) => {
   try {
-    const { userId, addressId } = req.params;
+    const userId = req.user.id;
+    const { addressId } = req.params;
     const formData = req.body;
 
-    if (!userId || !addressId) {
+    if (!addressId) {
       return res.status(400).json({
         success: false,
-        message: "User and address id is required!",
+        message: "Address id is required!",
       });
     }
 
@@ -103,11 +99,13 @@ const editAddress = async (req, res) => {
 
 const deleteAddress = async (req, res) => {
   try {
-    const { userId, addressId } = req.params;
-    if (!userId || !addressId) {
+    const userId = req.user.id;
+    const { addressId } = req.params;
+
+    if (!addressId) {
       return res.status(400).json({
         success: false,
-        message: "User and address id is required!",
+        message: "Address id is required!",
       });
     }
 

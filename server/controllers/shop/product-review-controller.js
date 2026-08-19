@@ -4,13 +4,14 @@ const ProductReview = require("../../models/Review");
 
 const addProductReview = async (req, res) => {
   try {
-    const { productId, userId, userName, reviewMessage, reviewValue } =
-      req.body;
+    const userId = req.user.id;
+    const userName = req.user.userName;
+    const { productId, reviewMessage, reviewValue } = req.body;
 
     const order = await Order.findOne({
       userId,
       "cartItems.productId": productId,
-      // orderStatus: "confirmed" || "delivered",
+      orderStatus: { $in: ["confirmed", "delivered"] },
     });
 
     if (!order) {

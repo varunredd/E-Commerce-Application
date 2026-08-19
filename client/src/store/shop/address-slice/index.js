@@ -16,24 +16,24 @@ export const addNewAddress = createAsyncThunk(
 
 export const fetchAllAddresses = createAsyncThunk(
   "/addresses/fetchAllAddresses",
-  async (userId) => {
-    const response = await api.get(`/api/shop/address/get/${userId}`);
+  async () => {
+    const response = await api.get("/api/shop/address/get");
     return response.data;
   }
 );
 
 export const editaAddress = createAsyncThunk(
   "/addresses/editaAddress",
-  async ({ userId, addressId, formData }) => {
-    const response = await api.put(`/api/shop/address/update/${userId}/${addressId}`, formData);
+  async ({ addressId, formData }) => {
+    const response = await api.put(`/api/shop/address/update/${addressId}`, formData);
     return response.data;
   }
 );
 
 export const deleteAddress = createAsyncThunk(
   "/addresses/deleteAddress",
-  async ({ userId, addressId }) => {
-    const response = await api.delete(`/api/shop/address/delete/${userId}/${addressId}`);
+  async ({ addressId }) => {
+    const response = await api.delete(`/api/shop/address/delete/${addressId}`);
     return response.data;
   }
 );
