@@ -11,6 +11,7 @@ const initialState = {
   userName: "",
   email: "",
   password: "",
+  confirmPassword: "",
 };
 
 function AuthRegister() {
@@ -21,7 +22,18 @@ function AuthRegister() {
 
   function onSubmit(event) {
     event.preventDefault();
-    dispatch(registerUser(formData)).then((data) => {
+    if (formData.password !== formData.confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+
+    const payload = {
+      userName: formData.userName,
+      email: formData.email,
+      password: formData.password,
+    };
+
+    dispatch(registerUser(payload)).then((data) => {
       if (data?.payload?.success) {
         toast({ title: data?.payload?.message });
         navigate("/auth/login");

@@ -39,6 +39,10 @@ mongoose
 const app = express();
 const PORT = process.env.PORT || 5011;
 
+// Railway/Render run behind a reverse proxy; this is required for correct client IP detection
+// in express-rate-limit and avoids ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set("trust proxy", 1);
+
 // Security headers — relax CSP for the React SPA
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },

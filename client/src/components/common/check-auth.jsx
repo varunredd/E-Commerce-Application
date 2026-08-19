@@ -4,7 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 function CheckAuth({ isAuthenticated, user, children }) {
     const location = useLocation();
 
-    const publicAuthPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+    const publicAuthPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
     const isPublicAuthPath = publicAuthPaths.some(p => location.pathname.includes(p));
 
     if (!isAuthenticated && !isPublicAuthPath) {

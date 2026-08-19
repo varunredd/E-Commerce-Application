@@ -2,7 +2,11 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
-const { sendWelcomeEmail, sendPasswordResetEmail } = require("../../helpers/email");
+const {
+  sendWelcomeEmail,
+  sendPasswordResetEmail,
+  sendEmailVerificationEmail,
+} = require("../../helpers/email");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
@@ -60,16 +64,27 @@ const registerUser = async (req, res) => {
       password: hashPassword,
     });
 
+    const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+    user.emailVerificationToken = crypto
+      .createHash("sha256")
+      .update(emailVerificationToken)
+      .digest("hex");
+    user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+
     await user.save();
 
-    // Fire-and-forget welcome email
-    sendWelcomeEmail(user.email, user.userName).catch((err) =>
-      console.error("Welcome email failed:", err.message)
+    sendEmailVerificationEmail(
+      user.email,
+      user.userName,
+      emailVerificationToken
+    ).catch((err) =>
+      console.error("Verification email failed:", err.message)
     );
 
-    res
-      .status(201)
-      .json({ success: true, message: "Registration Successful" });
+    res.status(201).json({
+      success: true,
+      message: "Registration successful. Please verify your email before login.",
+    });
   } catch (error) {
     console.error("Register error:", error.message);
     res.status(500).json({ success: false, message: "Registration failed" });
@@ -104,6 +119,13 @@ const loginUser = async (req, res) => {
         .json({ success: false, message: "Invalid credentials" });
     }
 
+    if (!checkUser.isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email before signing in.",
+      });
+    }
+
     const token = jwt.sign(
       {
         id: checkUser._id,
@@ -135,6 +157,50 @@ const loginUser = async (req, res) => {
   } catch (error) {
     console.error("Login error:", error.message);
     res.status(500).json({ success: false, message: "Login failed" });
+  }
+};
+
+const verifyEmail = async (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Verification token is required" });
+  }
+
+  try {
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification link",
+      });
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+
+    sendWelcomeEmail(user.email, user.userName).catch((err) =>
+      console.error("Welcome email failed:", err.message)
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully. You can now sign in.",
+    });
+  } catch (error) {
+    console.error("Verify email error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to verify email",
+    });
   }
 };
 
@@ -292,6 +358,7 @@ const requireRole = (...roles) => {
 module.exports = {
   registerUser,
   loginUser,
+  verifyEmail,
   logoutUser,
   forgotPassword,
   resetPassword,

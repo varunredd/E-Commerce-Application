@@ -72,6 +72,22 @@ async function sendPasswordResetEmail(to, userName, resetToken) {
   });
 }
 
+async function sendEmailVerificationEmail(to, userName, verificationToken) {
+  const verifyUrl = `${CLIENT_URL}/auth/verify-email?token=${verificationToken}`;
+  return sendEmail({
+    to,
+    subject: `Verify your ${APP_NAME} email`,
+    html: baseTemplate(`
+      <h2 style="font-size: 20px; margin-bottom: 16px;">Verify your email</h2>
+      <p style="line-height: 1.6;">Hi ${userName}, please confirm your email address to activate your account.</p>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${verifyUrl}" style="background: #000; color: #fff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">Verify Email</a>
+      </div>
+      <p style="color: #888; font-size: 13px;">This link expires in 24 hours.</p>
+    `),
+  });
+}
+
 async function sendOrderConfirmationEmail(to, userName, order) {
   const itemsHtml = order.cartItems
     .map(
@@ -143,6 +159,7 @@ async function sendShippingEmail(to, userName, order) {
 
 module.exports = {
   sendEmail,
+  sendEmailVerificationEmail,
   sendWelcomeEmail,
   sendPasswordResetEmail,
   sendOrderConfirmationEmail,
