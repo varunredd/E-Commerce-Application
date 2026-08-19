@@ -1,12 +1,15 @@
 const { Resend } = require("resend");
 
+const { getPublicAppUrl } = require("./app-url");
+
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const FROM_EMAIL = process.env.EMAIL_FROM || "E-Commerce <onboarding@resend.dev>";
-const APP_NAME = process.env.APP_NAME || "ShopVerse";
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const FROM_EMAIL =
+  process.env.EMAIL_FROM || "NovaShop <noreply@novashop.co.in>";
+const APP_NAME = process.env.APP_NAME || "NovaShop";
+const CLIENT_URL = getPublicAppUrl();
 
 async function sendEmail({ to, subject, html }) {
   if (!resend) {

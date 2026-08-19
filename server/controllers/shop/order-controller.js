@@ -7,6 +7,7 @@ const { sendOrderConfirmationEmail } = require("../../helpers/email");
 const { syncBusinessContext, isConfigured: isJobformConfigured } = require("../../helpers/jobform-integration");
 const { generateDemoShipment, progressShippingTimeline } = require("../../helpers/shipping");
 const { sendShippingEmail } = require("../../helpers/email");
+const { getPublicAppUrl } = require("../../helpers/app-url");
 
 const createOrder = async (req, res) => {
   try {
@@ -25,7 +26,7 @@ const createOrder = async (req, res) => {
       });
     }
 
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const clientUrl = getPublicAppUrl();
 
     // Fetch real product data from DB to prevent price manipulation
     const productIds = cartItems.map((item) => item.productId);

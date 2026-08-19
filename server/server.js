@@ -26,6 +26,8 @@ const shopSearchRouter = require("./routes/shop/search-routes");
 const shopReviewRouter = require("./routes/shop/review-routes");
 const commonFeatureRouter = require("./routes/common/feature-routes");
 const supportIntegrationRouter = require("./routes/integrations/support-routes");
+const { getAllowedOrigins } = require("./helpers/app-url");
+const jobformIntegrationRouter = require("./routes/integrations/jobform-routes");
 
 // Connect to MongoDB
 mongoose
@@ -66,10 +68,8 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// CORS — in production with same-origin deploy, still needed for cookie handling
-const allowedOrigins = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(",").map((s) => s.trim())
-  : ["http://localhost:5173"];
+// CORS — supports comma-separated CLIENT_URL (e.g. production domain + localhost)
+const allowedOrigins = getAllowedOrigins();
 
 app.use(
   cors({
@@ -103,6 +103,7 @@ app.use("/api/shop/search", apiLimiter, shopSearchRouter);
 app.use("/api/shop/review", apiLimiter, shopReviewRouter);
 app.use("/api/common/feature", apiLimiter, commonFeatureRouter);
 app.use("/api/integrations/support", apiLimiter, supportIntegrationRouter);
+app.use("/api/integrations/jobform", apiLimiter, jobformIntegrationRouter);
 
 // Serve static React build in production
 const clientBuildPath = path.join(__dirname, "..", "client", "dist");
