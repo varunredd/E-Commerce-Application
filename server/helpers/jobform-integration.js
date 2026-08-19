@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const Product = require("../models/Product");
 
 const JOBFORM_BASE_URL = process.env.JOBFORM_BASE_URL || "";
 const BUSINESS_INTEGRATION_SECRET = process.env.BUSINESS_INTEGRATION_SECRET || "";
@@ -27,96 +28,31 @@ function buildHeaders(rawBody) {
   };
 }
 
-/**
- * Sync customer + order data to Jobform so the support agent has context.
- * Expects Jobform's BusinessContextSnapshot format:
- * { customer: { id, name, email, accountStatus, riskLevel, lifetimeOrders, lifetimeRefunds, createdAt },
- *   orders: [{ id, customerId, status, currency, subtotalCents, shippingCents, taxCents,
- *              totalPaidCents, refundedCents, placedAt, deliveredAt, items: [...] }] }
- */
-async function syncBusinessContext(customer, orders) {
-  if (!isConfigured()) {
-    console.warn("[Jobform] Integration not configured — skipping sync");
-    return null;
+function verifyJobformRequest(req, rawBody) {
+  const secret = BUSINESS_INTEGRATION_SECRET.trim();
+  if (!secret || secret.length < 32) {
+    throw new Error("Business integration secret is not configured securely.");
   }
 
-  const payload = {
-    customer: {
-      id: String(customer._id),
-      name: customer.userName,
-      email: customer.email,
-      accountStatus: "ACTIVE",
-      riskLevel: "LOW",
-      lifetimeOrders: customer.lifetimeOrders || orders.length,
-      lifetimeRefunds: 0,
-      createdAt: customer.createdAt || new Date().toISOString(),
-    },
-    orders: orders.map((order) => ({
-      id: String(order._id),
-      customerId: String(customer._id),
-      status: mapOrderStatus(order.orderStatus),
-      currency: "USD",
-      subtotalCents: Math.round(order.totalAmount * 100),
-      shippingCents: 0,
-      taxCents: 0,
-      totalPaidCents: Math.round(order.totalAmount * 100),
-      refundedCents: 0,
-      placedAt: new Date(order.orderDate).toISOString(),
-      deliveredAt: order.orderStatus === "delivered"
-        ? new Date(order.orderUpdateDate).toISOString()
-        : null,
-      items: order.cartItems.map((item, i) => ({
-        id: `${String(order._id)}_item_${i}`,
-        sku: String(item.productId),
-        name: item.title,
-        quantity: item.quantity,
-        unitPriceCents: Math.round(item.price * 100),
-        finalSale: false,
-        refundable: true,
-      })),
-    })),
-  };
-
-  const rawBody = JSON.stringify(payload);
-  const headers = buildHeaders(rawBody);
-
-  const response = await fetch(
-    `${JOBFORM_BASE_URL}/api/integrations/business/context`,
-    { method: "POST", headers, body: rawBody }
-  );
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Jobform business sync failed (${response.status}): ${err}`);
+  const timestamp = req.headers["x-jobform-timestamp"];
+  const eventId = req.headers["x-jobform-event-id"];
+  const signature = req.headers["x-jobform-signature"];
+  if (!timestamp || !eventId || !signature) {
+    throw new Error("Signed integration headers are required.");
   }
 
-  return response.json();
-}
-
-/**
- * Launch a support session for a specific customer + order.
- * Returns { launchUrl, expiresInSeconds }.
- */
-async function launchSupport(customerId, orderId) {
-  if (!isConfigured()) {
-    return null;
+  const timestampMs = Number(timestamp);
+  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > 5 * 60_000) {
+    throw new Error("Integration request timestamp is outside the allowed window.");
   }
 
-  const payload = { customerId: String(customerId), orderId: String(orderId) };
-  const rawBody = JSON.stringify(payload);
-  const headers = buildHeaders(rawBody);
-
-  const response = await fetch(
-    `${JOBFORM_BASE_URL}/api/integrations/support/launch`,
-    { method: "POST", headers, body: rawBody }
-  );
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Jobform support launch failed (${response.status}): ${err}`);
+  const provided = String(signature).startsWith("sha256=") ? String(signature).slice(7) : String(signature);
+  const expected = signPayload({ timestamp: String(timestamp), eventId: String(eventId), rawBody });
+  const left = Buffer.from(provided, "hex");
+  const right = Buffer.from(expected, "hex");
+  if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) {
+    throw new Error("Integration signature is invalid.");
   }
-
-  return response.json();
 }
 
 function mapOrderStatus(status) {
@@ -131,4 +67,109 @@ function mapOrderStatus(status) {
   return mapping[status] || "PROCESSING";
 }
 
-module.exports = { syncBusinessContext, launchSupport, isConfigured };
+function resolveDeliveredAt(order) {
+  if (order.orderStatus !== "delivered") return null;
+  const deliveredAt = order.shipping?.deliveredAt || order.orderUpdateDate || order.orderDate;
+  return deliveredAt ? new Date(deliveredAt).toISOString() : null;
+}
+
+async function buildBusinessSnapshot(customer, orders) {
+  const productIds = [...new Set(
+    orders.flatMap((order) => order.cartItems.map((item) => String(item.productId))),
+  )];
+  const products = productIds.length
+    ? await Product.find({ _id: { $in: productIds } })
+    : [];
+  const productMap = new Map(products.map((product) => [String(product._id), product]));
+
+  return {
+    customer: {
+      id: String(customer._id),
+      name: customer.userName,
+      email: customer.email,
+      accountStatus: customer.accountStatus || "ACTIVE",
+      riskLevel: customer.riskLevel || "LOW",
+      lifetimeOrders: customer.lifetimeOrders || orders.length,
+      lifetimeRefunds: customer.lifetimeRefunds || 0,
+      createdAt: customer.createdAt || new Date().toISOString(),
+    },
+    orders: orders.map((order) => ({
+      id: String(order._id),
+      customerId: String(customer._id),
+      status: mapOrderStatus(order.orderStatus),
+      currency: "USD",
+      subtotalCents: Math.round(order.totalAmount * 100),
+      shippingCents: 0,
+      taxCents: 0,
+      totalPaidCents: Math.round(order.totalAmount * 100),
+      refundedCents: Math.round((order.refundedAmount || 0) * 100),
+      placedAt: new Date(order.orderDate).toISOString(),
+      deliveredAt: resolveDeliveredAt(order),
+      items: order.cartItems.map((item, index) => {
+        const product = productMap.get(String(item.productId));
+        return {
+          id: `${String(order._id)}_item_${index}`,
+          sku: String(item.productId),
+          name: item.title,
+          quantity: item.quantity,
+          unitPriceCents: Math.round(item.price * 100),
+          finalSale: Boolean(product?.finalSale),
+          refundable: product?.refundable !== false,
+        };
+      }),
+    })),
+  };
+}
+
+async function syncBusinessContext(customer, orders) {
+  if (!isConfigured()) {
+    console.warn("[Jobform] Integration not configured — skipping sync");
+    return null;
+  }
+
+  const payload = await buildBusinessSnapshot(customer, orders);
+  const rawBody = JSON.stringify(payload);
+  const headers = buildHeaders(rawBody);
+
+  const response = await fetch(
+    `${JOBFORM_BASE_URL}/api/integrations/business/context`,
+    { method: "POST", headers, body: rawBody },
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Jobform business sync failed (${response.status}): ${err}`);
+  }
+
+  return response.json();
+}
+
+async function launchSupport(customerId, orderId) {
+  if (!isConfigured()) {
+    return null;
+  }
+
+  const payload = { customerId: String(customerId), orderId: String(orderId) };
+  const rawBody = JSON.stringify(payload);
+  const headers = buildHeaders(rawBody);
+
+  const response = await fetch(
+    `${JOBFORM_BASE_URL}/api/integrations/support/launch`,
+    { method: "POST", headers, body: rawBody },
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Jobform support launch failed (${response.status}): ${err}`);
+  }
+
+  return response.json();
+}
+
+module.exports = {
+  syncBusinessContext,
+  launchSupport,
+  buildBusinessSnapshot,
+  verifyJobformRequest,
+  isConfigured,
+};

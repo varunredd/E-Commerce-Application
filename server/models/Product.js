@@ -55,6 +55,14 @@ const ProductSchema = new mongoose.Schema(
       required: false,
       index: true,
     },
+    finalSale: {
+      type: Boolean,
+      default: false,
+    },
+    refundable: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

@@ -1,5 +1,7 @@
 const Order = require("../../models/Order");
+const User = require("../../models/User");
 const { progressShippingTimeline } = require("../../helpers/shipping");
+const { syncBusinessContext, isConfigured: isJobformConfigured } = require("../../helpers/jobform-integration");
 
 const getAdminUserId = (req) => req.user?.id || req.user?._id;
 
@@ -157,6 +159,16 @@ const updateOrderStatus = async (req, res) => {
     order.orderUpdateDate = new Date();
 
     await order.save();
+
+    if (isJobformConfigured()) {
+      User.findById(order.userId)
+        .then(async (user) => {
+          if (!user) return;
+          const orders = await Order.find({ userId: order.userId }).sort({ orderDate: -1 }).limit(20);
+          return syncBusinessContext(user, orders);
+        })
+        .catch((error) => console.error("Jobform sync failed:", error.message));
+    }
 
     res.status(200).json({
       success: true,
