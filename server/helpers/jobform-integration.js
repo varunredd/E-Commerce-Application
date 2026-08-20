@@ -68,9 +68,32 @@ function mapOrderStatus(status) {
 }
 
 function resolveDeliveredAt(order) {
-  if (order.orderStatus !== "delivered") return null;
+  if (mapOrderStatus(order.orderStatus) !== "DELIVERED") return null;
   const deliveredAt = order.shipping?.deliveredAt || order.orderUpdateDate || order.orderDate;
   return deliveredAt ? new Date(deliveredAt).toISOString() : null;
+}
+
+function orderSubtotalCents(order) {
+  const fromItems = (order.cartItems || []).reduce(
+    (sum, item) => sum + Math.round(Number(item.price || 0) * 100) * Number(item.quantity || 0),
+    0,
+  );
+  if (fromItems > 0) return fromItems;
+  const shippingCents = Math.round(Number(order.shippingAmount || 0) * 100);
+  const taxCents = Math.round(Number(order.taxAmount || 0) * 100);
+  return Math.max(0, Math.round(Number(order.totalAmount || 0) * 100) - shippingCents - taxCents);
+}
+
+function resolveItemFlags(item, product) {
+  const finalSale =
+    typeof item.finalSale === "boolean"
+      ? item.finalSale
+      : Boolean(product?.finalSale);
+  const refundable =
+    typeof item.refundable === "boolean"
+      ? item.refundable
+      : product?.refundable !== false;
+  return { finalSale, refundable };
 }
 
 async function buildBusinessSnapshot(customer, orders) {
@@ -91,33 +114,46 @@ async function buildBusinessSnapshot(customer, orders) {
       riskLevel: customer.riskLevel || "LOW",
       lifetimeOrders: customer.lifetimeOrders || orders.length,
       lifetimeRefunds: customer.lifetimeRefunds || 0,
-      createdAt: customer.createdAt || new Date().toISOString(),
+      createdAt: customer.createdAt
+        ? new Date(customer.createdAt).toISOString()
+        : new Date().toISOString(),
     },
-    orders: orders.map((order) => ({
-      id: String(order._id),
-      customerId: String(customer._id),
-      status: mapOrderStatus(order.orderStatus),
-      currency: "USD",
-      subtotalCents: Math.round(order.totalAmount * 100),
-      shippingCents: 0,
-      taxCents: 0,
-      totalPaidCents: Math.round(order.totalAmount * 100),
-      refundedCents: Math.round((order.refundedAmount || 0) * 100),
-      placedAt: new Date(order.orderDate).toISOString(),
-      deliveredAt: resolveDeliveredAt(order),
-      items: order.cartItems.map((item, index) => {
-        const product = productMap.get(String(item.productId));
-        return {
-          id: `${String(order._id)}_item_${index}`,
-          sku: String(item.productId),
-          name: item.title,
-          quantity: item.quantity,
-          unitPriceCents: Math.round(item.price * 100),
-          finalSale: Boolean(product?.finalSale),
-          refundable: product?.refundable !== false,
-        };
-      }),
-    })),
+    orders: orders.map((order) => {
+      const shippingCents = Math.round(Number(order.shippingAmount || 0) * 100);
+      const taxCents = Math.round(Number(order.taxAmount || 0) * 100);
+      const subtotalCents = orderSubtotalCents(order);
+      const totalPaidCents =
+        shippingCents + taxCents > 0
+          ? subtotalCents + shippingCents + taxCents
+          : Math.round(Number(order.totalAmount || 0) * 100);
+
+      return {
+        id: String(order._id),
+        customerId: String(customer._id),
+        status: mapOrderStatus(order.orderStatus),
+        currency: "USD",
+        subtotalCents,
+        shippingCents,
+        taxCents,
+        totalPaidCents,
+        refundedCents: Math.round((order.refundedAmount || 0) * 100),
+        placedAt: new Date(order.orderDate).toISOString(),
+        deliveredAt: resolveDeliveredAt(order),
+        items: order.cartItems.map((item, index) => {
+          const product = productMap.get(String(item.productId));
+          const flags = resolveItemFlags(item, product);
+          return {
+            id: `${String(order._id)}_item_${index}`,
+            sku: String(item.productId),
+            name: item.title,
+            quantity: item.quantity,
+            unitPriceCents: Math.round(item.price * 100),
+            finalSale: flags.finalSale,
+            refundable: flags.refundable,
+          };
+        }),
+      };
+    }),
   };
 }
 

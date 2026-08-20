@@ -51,6 +51,14 @@ const OrderSchema = new mongoose.Schema(
           required: false,
           index: true,
         },
+        finalSale: {
+          type: Boolean,
+          default: false,
+        },
+        refundable: {
+          type: Boolean,
+          default: true,
+        },
       },
     ],
     addressInfo: {
@@ -76,6 +84,16 @@ const OrderSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
       required: true,
+      min: 0,
+    },
+    shippingAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    taxAmount: {
+      type: Number,
+      default: 0,
       min: 0,
     },
     refundedAmount: {

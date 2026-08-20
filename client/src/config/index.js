@@ -70,6 +70,8 @@ export const addProductFormElements = [
       { id: "kids", label: "Kids" },
       { id: "accessories", label: "Accessories" },
       { id: "footwear", label: "Footwear" },
+      { id: "electronics", label: "Electronics" },
+      { id: "home", label: "Home" },
     ],
   },
   {
@@ -83,6 +85,12 @@ export const addProductFormElements = [
       { id: "levi", label: "Levi's" },
       { id: "zara", label: "Zara" },
       { id: "h&m", label: "H&M" },
+      { id: "novashop", label: "NovaShop" },
+      { id: "audiopro", label: "AudioPro" },
+      { id: "trailform", label: "Trailform" },
+      { id: "homelab", label: "HomeLab" },
+      { id: "cleargate", label: "ClearGate" },
+      { id: "purecare", label: "PureCare" },
     ],
   },
   {
@@ -145,6 +153,16 @@ export const shoppingViewHeaderMenuItems = [
     path: "/shop/listing",
   },
   {
+    id: "electronics",
+    label: "Electronics",
+    path: "/shop/listing",
+  },
+  {
+    id: "home",
+    label: "Home",
+    path: "/shop/listing",
+  },
+  {
     id: "search",
     label: "Search",
     path: "/shop/search",
@@ -157,6 +175,8 @@ export const categoryOptionsMap = {
   kids: "Kids",
   accessories: "Accessories",
   footwear: "Footwear",
+  electronics: "Electronics",
+  home: "Home",
 };
 
 export const brandOptionsMap = {
@@ -166,6 +186,12 @@ export const brandOptionsMap = {
   levi: "Levi",
   zara: "Zara",
   "h&m": "H&M",
+  novashop: "NovaShop",
+  audiopro: "AudioPro",
+  trailform: "Trailform",
+  homelab: "HomeLab",
+  cleargate: "ClearGate",
+  purecare: "PureCare",
 };
 
 export const filterOptions = {
@@ -175,6 +201,8 @@ export const filterOptions = {
     { id: "kids", label: "Kids" },
     { id: "accessories", label: "Accessories" },
     { id: "footwear", label: "Footwear" },
+    { id: "electronics", label: "Electronics" },
+    { id: "home", label: "Home" },
   ],
   brand: [
     { id: "nike", label: "Nike" },
@@ -183,6 +211,12 @@ export const filterOptions = {
     { id: "levi", label: "Levi's" },
     { id: "zara", label: "Zara" },
     { id: "h&m", label: "H&M" },
+    { id: "novashop", label: "NovaShop" },
+    { id: "audiopro", label: "AudioPro" },
+    { id: "trailform", label: "Trailform" },
+    { id: "homelab", label: "HomeLab" },
+    { id: "cleargate", label: "ClearGate" },
+    { id: "purecare", label: "PureCare" },
   ],
 };
 

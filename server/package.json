@@ -9,6 +9,8 @@
     "seed": "node seed.js",
     "seed:transactional": "node seed-transactional.js",
     "seed:transactional:sync": "node seed-transactional.js --sync-jobform",
+    "seed:jobform-policy": "node seed-jobform-policy.js",
+    "seed:jobform-policy:sync": "node seed-jobform-policy.js --sync-jobform",
     "sync:jobform": "node seed-transactional.js --sync-only",
     "reset-db": "node reset-db.js"
   },

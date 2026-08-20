@@ -99,6 +99,8 @@ const createOrder = async (req, res) => {
         price: unitPrice,
         quantity: item.quantity,
         ownerAdminId: product.ownerAdminId || undefined,
+        finalSale: Boolean(product.finalSale),
+        refundable: product.refundable !== false,
       });
 
       serverTotalAmount += unitPrice * item.quantity;
