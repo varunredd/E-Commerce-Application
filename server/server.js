@@ -29,17 +29,10 @@ const supportIntegrationRouter = require("./routes/integrations/support-routes")
 const { getAllowedOrigins } = require("./helpers/app-url");
 const jobformIntegrationRouter = require("./routes/integrations/jobform-routes");
 
-// Connect to MongoDB
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((error) => {
-    console.error("MongoDB connection failed:", error.message);
-    process.exit(1);
-  });
-
+// Connect to MongoDB after the HTTP server is up so Railway healthchecks
+// can succeed even while Atlas DNS/auth is still settling.
 const app = express();
-const PORT = process.env.PORT || 5011;
+const PORT = Number(process.env.PORT) || 5011;
 
 // Railway/Render run behind a reverse proxy; this is required for correct client IP detection
 // in express-rate-limit and avoids ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
@@ -122,4 +115,13 @@ app.use((err, req, res, _next) => {
   });
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+  mongoose
+    .connect(process.env.MONGODB_URI)
+    .then(() => console.log("MongoDB connected"))
+    .catch((error) => {
+      console.error("MongoDB connection failed:", error.message);
+      process.exit(1);
+    });
+});

@@ -20,8 +20,9 @@ COPY --from=client-build /app/client/dist ./client/dist
 
 EXPOSE 5011
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:5011/api/health || exit 1
+# Use $PORT when Railway injects it; fall back to 5011 for local Docker runs.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 \
+  CMD wget -qO- http://127.0.0.1:${PORT:-5011}/api/health || exit 1
 
 WORKDIR /app/server
 CMD ["node", "server.js"]
