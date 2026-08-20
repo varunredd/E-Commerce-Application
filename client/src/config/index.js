@@ -71,7 +71,7 @@ export const addProductFormElements = [
       { id: "accessories", label: "Accessories" },
       { id: "footwear", label: "Footwear" },
       { id: "electronics", label: "Electronics" },
-      { id: "home", label: "Home" },
+      { id: "home", label: "Home Goods" },
     ],
   },
   {
@@ -159,7 +159,7 @@ export const shoppingViewHeaderMenuItems = [
   },
   {
     id: "home",
-    label: "Home",
+    label: "Home Goods",
     path: "/shop/listing",
   },
   {
@@ -176,7 +176,7 @@ export const categoryOptionsMap = {
   accessories: "Accessories",
   footwear: "Footwear",
   electronics: "Electronics",
-  home: "Home",
+  home: "Home Goods",
 };
 
 export const brandOptionsMap = {
@@ -202,7 +202,7 @@ export const filterOptions = {
     { id: "accessories", label: "Accessories" },
     { id: "footwear", label: "Footwear" },
     { id: "electronics", label: "Electronics" },
-    { id: "home", label: "Home" },
+    { id: "home", label: "Home Goods" },
   ],
   brand: [
     { id: "nike", label: "Nike" },
