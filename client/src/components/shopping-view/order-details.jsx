@@ -25,6 +25,7 @@ import {
   RETURN_EVENT_LABELS,
 } from "@/lib/return-status";
 import api from "@/lib/api";
+import { useToast } from "../ui/use-toast";
 
 const STATUS_ICONS = {
   label_created: Package,
@@ -106,6 +107,7 @@ function EventTimeline({ events, statusLabels = STATUS_LABELS }) {
 
 function ShoppingOrderDetailsView({ orderDetails }) {
   const { user } = useSelector((state) => state.auth);
+  const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [helpLoading, setHelpLoading] = useState(false);
 
@@ -149,9 +151,23 @@ function ShoppingOrderDetailsView({ orderDetails }) {
       const launchUrl = response.data?.data?.launchUrl;
       if (launchUrl) {
         window.open(launchUrl, "_blank", "noopener,noreferrer");
+        return;
       }
+      toast({
+        title: "Support unavailable",
+        description: "No support link was returned. Try again in a moment.",
+        variant: "destructive",
+      });
     } catch (error) {
       console.error("Support launch failed:", error);
+      const message =
+        error?.response?.data?.message ||
+        "Could not open customer support. Check Jobform integration settings.";
+      toast({
+        title: "Could not open support",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
       setHelpLoading(false);
     }

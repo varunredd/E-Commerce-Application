@@ -1,16 +1,21 @@
 const crypto = require("crypto");
 const Product = require("../models/Product");
 
-const JOBFORM_BASE_URL = process.env.JOBFORM_BASE_URL || "";
-const BUSINESS_INTEGRATION_SECRET = process.env.BUSINESS_INTEGRATION_SECRET || "";
+function getJobformBaseUrl() {
+  return (process.env.JOBFORM_BASE_URL || "").trim().replace(/\/$/, "");
+}
+
+function getIntegrationSecret() {
+  return (process.env.BUSINESS_INTEGRATION_SECRET || "").trim();
+}
 
 function isConfigured() {
-  return JOBFORM_BASE_URL.length > 0 && BUSINESS_INTEGRATION_SECRET.length >= 32;
+  return getJobformBaseUrl().length > 0 && getIntegrationSecret().length >= 32;
 }
 
 function signPayload({ timestamp, eventId, rawBody }) {
   return crypto
-    .createHmac("sha256", BUSINESS_INTEGRATION_SECRET)
+    .createHmac("sha256", getIntegrationSecret())
     .update(`${timestamp}.${eventId}.${rawBody}`)
     .digest("hex");
 }
@@ -29,7 +34,7 @@ function buildHeaders(rawBody) {
 }
 
 function verifyJobformRequest(req, rawBody) {
-  const secret = BUSINESS_INTEGRATION_SECRET.trim();
+  const secret = getIntegrationSecret();
   if (!secret || secret.length < 32) {
     throw new Error("Business integration secret is not configured securely.");
   }
@@ -168,7 +173,7 @@ async function syncBusinessContext(customer, orders) {
   const headers = buildHeaders(rawBody);
 
   const response = await fetch(
-    `${JOBFORM_BASE_URL}/api/integrations/business/context`,
+    `${getJobformBaseUrl()}/api/integrations/business/context`,
     { method: "POST", headers, body: rawBody },
   );
 
@@ -190,7 +195,7 @@ async function launchSupport(customerId, orderId) {
   const headers = buildHeaders(rawBody);
 
   const response = await fetch(
-    `${JOBFORM_BASE_URL}/api/integrations/support/launch`,
+    `${getJobformBaseUrl()}/api/integrations/support/launch`,
     { method: "POST", headers, body: rawBody },
   );
 
